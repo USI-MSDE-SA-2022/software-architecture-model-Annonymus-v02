@@ -232,10 +232,12 @@ Our Project [summarize main advantages over status quo, unique selling point]
 </ul>
 <p>The chosen domain should be unique for each student.</p>
 <p>Please be ready to give a 2 minute presentation about it (you can use a slide but it&#39;s not necessary)</p>
-<section class="hint"><span>Hint: </span>to choose a meaningful project look at the rest of the modeling tasks which you are going to perform in the context of your domain.</section></section><p>Project Name: <em>My Project</em></p>
-<p>Project Type:</p>
+<section class="hint"><span>Hint: </span>to choose a meaningful project look at the rest of the modeling tasks which you are going to perform in the context of your domain.</section></section><p>Project Name: Tag4You</p>
+<p>Project Type: Potential future project</p>
 <p>Vision Statement:</p>
-<p>Additional Information:</p>
+<p>Companies whose service is to offer a large number of individual items, such as amazon and netflix, require a way for users to find the item(s) they want or need among the many on offer. One way for customers to do so is using tags: products are tagged with specific properties that a user can be interested in. For example: netflix tags some movies as &quot;romantic&quot;. Users interested in romantic movies can search for that and get a list of movies they&#39;re interested in. Unfortunately, these systems are often sorely lacking and provide far too little granularity. For example, Netflix only provides a few dozen tags and there is no way to search for a movie with &quot;female protagonist&quot; or &quot;gay love&quot; or &quot;urban fantasy&quot;. Furthermore, most companies only offer positive search and do not allow customers to <em>exclude</em> items with certain attributes. Tag4you offers a simple and rapid interface to accomplish all of that. Let us imagine a world in which instead of writing &quot;fantasy movie&quot; into netflix&#39;s search bar and being presented with a list of sci-fi TV series, I can write &quot;high fantasy, strong female protagonist, no romance, reviews &gt; 8, length &lt; 120&quot; and get a movie I actually <em>want</em> to watch instead of the one I have to.</p>
+<p>Additional Information:
+The advantage of using Tag4You instead of developing the system in-house is clear: not only do you save on development costs and time, the end product is also more stable, feature-rich and provides a uniform query language which users are used to from other companies using our services.</p>
 <h1 id="ex---architectural-decision-records"><span class='task'>2.</span>  Architectural Decision Records</h1>
 <section class="instructions"><p>Software architecture is about making design decisions that will impact the quality of the software you plan to build.</p>
 <p>Let&#39;s practice how to describe an architectural decision. We will keep using ADRs to document architectural decisions in the rest of the model.</p>
@@ -321,7 +323,7 @@ Our Project [summarize main advantages over status quo, unique selling point]
 <p>Here is a PlantUML example logical view and process view.</p>
 <img src="./puml_e2.svg"><img src="./puml_e3.svg"><section class="hint"><span>Hint: </span>How to connect sub-components to other external components? Use this pattern.</section><img src="./puml_e4.svg"><section class="pass"><span>&starf;&star;&star;: </span>6 components (1 decomposed), 1 use case/process view</section><section class="ok"><span>&starf;&starf;&star;: </span>6 components (1 decomposed), 2 use case/process view</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;6 components (&gt;1 decomposed) and &gt;2 use case/process view</section></section><h2 id="logical-view">Logical View</h2>
 <h2 id="process-views">Process Views</h2>
-<p>Use Case: </p>
+<p>Use Case:</p>
 <h1 id="ex---component-model-bottom-up"><span class='task'>8.</span>  Component Model: Bottom-Up</h1>
 <section class="instructions"><p>Within the context of your project domain, represent a model of your modular software architecture decomposed into components.</p>
 <p>To design this model you should attempt to buy and reuse as many components as possible.</p>
@@ -336,15 +338,15 @@ Our Project [summarize main advantages over status quo, unique selling point]
 </li>
 </ol>
 <p>Get started with one of these PlantUML templates, or you can come up with your own notation to describe the interfaces, as long as it includes all the necessary details.</p>
-<p>The first template describes separately the provided/required interfaces of each component. </p>
+<p>The first template describes separately the provided/required interfaces of each component.</p>
 <p><img src="./puml_2.svg" alt="Separate Required/Provided Interfaces"></p>
 <p>The second template annotates the logical view with the interface descriptions: less redundant, but needs the logical dependencies to be modeled to show which are the required interfaces.</p>
 <p><img src="./puml_3.svg" alt="Shared Interfaces"></p>
-<section class="pass"><span>&starf;&star;&star;: </span>define interfaces of all outer-level components</section><section class="ok"><span>&starf;&starf;&star;: </span>Define interfaces of all outer-level components. Does your architecture publish a Web API? If not, extend it so that it does. </section><section class="exceed"><span>&starf;&starf;&starf;: </span>Also, document the Web API using the OpenAPI language. You can use the <a href="http://api-ace.inf.usi.ch/openapi-to-tree/">OpenAPI-to-Tree</a> tool to visualize the structure of your OpenAPI description.</section></section><h1 id="ex---connector-view"><span class='task'>10.</span>  Connector View</h1>
+<section class="pass"><span>&starf;&star;&star;: </span>define interfaces of all outer-level components</section><section class="ok"><span>&starf;&starf;&star;: </span>Define interfaces of all outer-level components. Does your architecture publish a Web API? If not, extend it so that it does.</section><section class="exceed"><span>&starf;&starf;&starf;: </span>Also, document the Web API using the OpenAPI language. You can use the <a href="http://api-ace.inf.usi.ch/openapi-to-tree/">OpenAPI-to-Tree</a> tool to visualize the structure of your OpenAPI description.</section></section><h1 id="ex---connector-view"><span class='task'>10.</span>  Connector View</h1>
 <section class="instructions"><p>Extend your existing models introducing the connector view</p>
 <p>For every pair of connected components (logical view), pick the most suitable connector. Existing components can play the role of connector, or new connectors may need to be introduced.</p>
 <p>Make sure that the interactions shown in the process views reflect the primitives of the selected connector</p>
-<section class="pass"><span>&starf;&star;&star;: </span>model existing connectors based on previous model decisions</section><section class="ok"><span>&starf;&starf;&star;: </span>model existing connectors based on previous model decisions, write an ADR about the choice of one connector</section><section class="exceed"><span>&starf;&starf;&starf;: </span>introduce a new type of connector and update your existing process view 
+<section class="pass"><span>&starf;&star;&star;: </span>model existing connectors based on previous model decisions</section><section class="ok"><span>&starf;&starf;&star;: </span>model existing connectors based on previous model decisions, write an ADR about the choice of one connector</section><section class="exceed"><span>&starf;&starf;&starf;: </span>introduce a new type of connector and update your existing process view
 (sequence diagram) to show the connector primitives in action</section></section><h1 id="ex---adapters-and-coupling"><span class='task'>11.</span>  Adapters and Coupling</h1>
 <section class="instructions"><ol>
 <li>Highlight the connectors (or components) in your existing bottom-up design playing the role of adapter. (We suggest to use the bottom-up design since when dealing with externally sourced components, their interfaces can be a source of mismatches).</li>
@@ -379,14 +381,14 @@ Whenever you have a connector you couple together the components and different c
 </ol>
 <p>Your model should be non-trivial: include more than one physical device/virtual container (or both). Be ready to discuss which connectors are found at the device/container boundaries.</p>
 <p>b. Write an ADR about which deployment strategy you plan to adopt. The alternatives to be considered are: big bang, blue/green, shadow, pilot, gradual phase-in, canary, A/B testing.</p>
-<p>c. (Optional) Prepare a demo of a basic continuous integration and delivery pipeline for your architectural documentation so that you can obtain a single, integrated PDF with all the viewpoints you have modeled so far. </p>
+<p>c. (Optional) Prepare a demo of a basic continuous integration and delivery pipeline for your architectural documentation so that you can obtain a single, integrated PDF with all the viewpoints you have modeled so far.</p>
 <p>For example:</p>
 <ul>
 <li>configure a GitHub webhook to be called whenever you push changes to your documentation</li>
 <li>setup a GitHub action (or similar) to build and publish your documentation on a website</li>
 </ul>
 <section class="pass"><span>&starf;&star;&star;: </span>1 physical view, 1 deployment view, 1 ADR (b.)</section><section class="ok"><span>&starf;&starf;&star;: </span>&gt;1 physical view, &gt;1 deployment view, 1 ADR (b.)</section><section class="exceed"><span>&starf;&starf;&starf;: </span>1 physical view, 1 deployment view, 1 ADR (b.) + 1 demo (c.)</section></section><h1 id="ex---availability-and-services"><span class='task'>13.</span>  Availability and Services</h1>
-<section class="instructions "><p>The goal of this week is to plan how to deliver your software as a service with high availability.</p>
+<section class="instructions"><p>The goal of this week is to plan how to deliver your software as a service with high availability.</p>
 <ol>
 <li>If necessary, change your deployment design so that your software is hosted on a server (which could be running as a Cloud VM). Your SaaS architecture should show how your SaaS can be remotely accessed from a client such as a Web browser, or a mobile app</li>
 <li>Sketch your software as a service pricing model (optional)</li>
@@ -398,7 +400,7 @@ Whenever you have a connector you couple together the components and different c
 <li>How did you mitigate the impact of your external dependencies being not available? (if applicable)</li>
 </ol>
 <section class="pass"><span>&starf;&star;&star;: </span>1, 3, 4, one of:  5, 6, 7, 8</section><section class="ok"><span>&starf;&starf;&star;: </span>1, 2, 3, 4, two of:  5, 6, 7, 8</section><section class="exceed"><span>&starf;&starf;&starf;: </span>1, 2, 3, 4, 5, 6, 7, 8</section></section><h1 id="ex---scalability"><span class='task'>14.</span>  Scalability</h1>
-<section class="instructions "><p>Now that your architecture delivers your software as a service, let&#39;s redesign it so that it can scale!</p>
+<section class="instructions"><p>Now that your architecture delivers your software as a service, let&#39;s redesign it so that it can scale!</p>
 <ol>
 <li><p>Pick one scalability dimension: number of clients, size of input, size of state, number of dependencies</p>
 </li>
@@ -412,7 +414,7 @@ Whenever you have a connector you couple together the components and different c
 </li>
 </ol>
 <section class="pass"><span>&starf;&star;&star;: </span>1, 2, 3, 5</section><section class="ok"><span>&starf;&starf;&star;: </span>1, 2, 3, 4, 5</section><section class="exceed"><span>&starf;&starf;&starf;: </span>1, 2, 3, 4, 5 then redo 1, 2, 3 for different scalability dimensions</section></section><h1 id="ex---flexibility"><span class='task'>15.</span>  Flexibility</h1>
-<section class="instructions "><p>Only dead software stops changing. You just received a message from your customer, they have an idea. Is your architecture ready for it?</p>
+<section class="instructions"><p>Only dead software stops changing. You just received a message from your customer, they have an idea. Is your architecture ready for it?</p>
 <ol>
 <li><p>Pick a new use case scenario. Precisely, what exactly do you need to change of your existing architecture so that it can be supported? Model the updated logical/process/deployment views.</p>
 </li>

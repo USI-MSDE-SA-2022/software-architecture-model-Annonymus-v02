@@ -1,2 +1,4 @@
 node_modules/
 upload/files.json
+.DS_Store
+yarn.lock

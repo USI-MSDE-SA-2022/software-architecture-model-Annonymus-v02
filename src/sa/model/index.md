@@ -1,7 +1,7 @@
-title: 
+title:
 Software Architecture Model
 ---
- 
+
 # Getting started
 
 You will use [Markdown](https://www.markdownguide.org/cheat-sheetplan) and [PlantUML](https://plantuml.com/) to describe a software architecture model about your own project.
@@ -14,7 +14,7 @@ We begin by selecting a suitable project domain.
 
 
 
-# Ex - Domain Selection 
+# Ex - Domain Selection
 
 {.instructions
 
@@ -45,14 +45,16 @@ Hint: to choose a meaningful project look at the rest of the modeling tasks whic
 
 }
 
-Project Name: *My Project*
+Project Name: Tag4You
 
-Project Type:
+Project Type: Potential future project
 
 Vision Statement:
 
-Additional Information:
+Companies whose service is to offer a large number of individual items, such as amazon and netflix, require a way for users to find the item(s) they want or need among the many on offer. One way for customers to do so is using tags: products are tagged with specific properties that a user can be interested in. For example: netflix tags some movies as "romantic". Users interested in romantic movies can search for that and get a list of movies they're interested in. Unfortunately, these systems are often sorely lacking and provide far too little granularity. For example, Netflix only provides a few dozen tags and there is no way to search for a movie with "female protagonist" or "gay love" or "urban fantasy". Furthermore, most companies only offer positive search and do not allow customers to *exclude* items with certain attributes. Tag4you offers a simple and rapid interface to accomplish all of that. Let us imagine a world in which instead of writing "fantasy movie" into netflix's search bar and being presented with a list of sci-fi TV series, I can write "high fantasy, strong female protagonist, no romance, good music, score > 8, length < 120" and get a movie I actually *want* to watch instead of the one I have to.
 
+Additional Information:
+The advantage of using Tag4You instead of developing the system in-house is clear: not only do you save on development costs and time, the end product is also more stable, feature-rich and provides a uniform query language which users are used to from other companies using our services.
 
 
 # Ex - Architectural Decision Records
@@ -146,7 +148,7 @@ Source -> [System] : "Boot"
 
 @enduml
 ```
- 
+
 
 # Ex - Quality Attribute Tradeoff
 
@@ -245,7 +247,7 @@ interface " " as MPI
 interface " " as SRI
 interface " " as CDI
 interface " " as PSI
-[Customer Database <$database{scale=0.33}>] as CDB 
+[Customer Database <$database{scale=0.33}>] as CDB
 [Music Player] as MP
 [User Interface] as UI
 [Payment Service] as PS
@@ -324,7 +326,7 @@ Exceed: >6 components (>1 decomposed) and >2 use case/process view
 
 ## Process Views
 
-Use Case: 
+Use Case:
 
 
 
@@ -361,7 +363,7 @@ In this iteration, we will detail your previous model to specify the provided in
 
 Get started with one of these PlantUML templates, or you can come up with your own notation to describe the interfaces, as long as it includes all the necessary details.
 
-The first template describes separately the provided/required interfaces of each component. 
+The first template describes separately the provided/required interfaces of each component.
 
 ![Separate Required/Provided Interfaces](./examples/interface1.puml)
 
@@ -371,7 +373,7 @@ The second template annotates the logical view with the interface descriptions: 
 
 Pass: define interfaces of all outer-level components
 
-Good: Define interfaces of all outer-level components. Does your architecture publish a Web API? If not, extend it so that it does. 
+Good: Define interfaces of all outer-level components. Does your architecture publish a Web API? If not, extend it so that it does.
 
 Exceed: Also, document the Web API using the OpenAPI language. You can use the [OpenAPI-to-Tree](http://api-ace.inf.usi.ch/openapi-to-tree/) tool to visualize the structure of your OpenAPI description.
 
@@ -391,7 +393,7 @@ Pass: model existing connectors based on previous model decisions
 
 Good: model existing connectors based on previous model decisions, write an ADR about the choice of one connector
 
-Exceed: introduce a new type of connector and update your existing process view 
+Exceed: introduce a new type of connector and update your existing process view
 (sequence diagram) to show the connector primitives in action
 
 }
@@ -447,7 +449,7 @@ Your model should be non-trivial: include more than one physical device/virtual 
 
 b. Write an ADR about which deployment strategy you plan to adopt. The alternatives to be considered are: big bang, blue/green, shadow, pilot, gradual phase-in, canary, A/B testing.
 
-c. (Optional) Prepare a demo of a basic continuous integration and delivery pipeline for your architectural documentation so that you can obtain a single, integrated PDF with all the viewpoints you have modeled so far. 
+c. (Optional) Prepare a demo of a basic continuous integration and delivery pipeline for your architectural documentation so that you can obtain a single, integrated PDF with all the viewpoints you have modeled so far.
 
 For example:
 
@@ -464,7 +466,7 @@ Exceed: 1 physical view, 1 deployment view, 1 ADR (b.) + 1 demo (c.)
 
 # Ex - Availability and Services
 
-{.instructions 
+{.instructions
 
 The goal of this week is to plan how to deliver your software as a service with high availability.
 
@@ -487,7 +489,7 @@ Exceed: 1, 2, 3, 4, 5, 6, 7, 8
 
 # Ex - Scalability
 
-{.instructions 
+{.instructions
 
 Now that your architecture delivers your software as a service, let's redesign it so that it can scale!
 
@@ -511,7 +513,7 @@ Exceed: 1, 2, 3, 4, 5 then redo 1, 2, 3 for different scalability dimensions
 
 # Ex - Flexibility
 
-{.instructions 
+{.instructions
 
 Only dead software stops changing. You just received a message from your customer, they have an idea. Is your architecture ready for it?
 
