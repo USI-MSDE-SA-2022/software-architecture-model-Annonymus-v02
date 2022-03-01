@@ -1,7 +1,7 @@
 <html>
 
 <head>
-    <title>Software Architecture Model</title>
+    <title>Software Architecture Model of Tag4You by Marco Tereh</title>
     <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Fira+Sans|Fira+Mono">
     <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.2.0/build/styles/default.min.css">
     <style>
@@ -200,7 +200,7 @@ flex-direction: column}
         </svg>
         <div class="title">
             <h2></h2>
-            <h1>Software Architecture Model</h1>
+            <h1>Software Architecture Model of Tag4You by Marco Tereh</h1>
         </div>
         <ul>
             <li>Prof. Cesare Pautasso</li>
@@ -235,7 +235,7 @@ Our Project [summarize main advantages over status quo, unique selling point]
 <section class="hint"><span>Hint: </span>to choose a meaningful project look at the rest of the modeling tasks which you are going to perform in the context of your domain.</section></section><p>Project Name: Tag4You</p>
 <p>Project Type: Potential future project</p>
 <p>Vision Statement:</p>
-<p>Companies whose service is to offer a large number of individual items, such as amazon and netflix, require a way for users to find the item(s) they want or need among the many on offer. One way for customers to do so is using tags: products are tagged with specific properties that a user can be interested in. For example: netflix tags some movies as &quot;romantic&quot;. Users interested in romantic movies can search for that and get a list of movies they&#39;re interested in. Unfortunately, these systems are often sorely lacking and provide far too little granularity. For example, Netflix only provides a few dozen tags and there is no way to search for a movie with &quot;female protagonist&quot; or &quot;gay love&quot; or &quot;urban fantasy&quot;. Furthermore, most companies only offer positive search and do not allow customers to <em>exclude</em> items with certain attributes. Tag4you offers a simple and rapid interface to accomplish all of that. Let us imagine a world in which instead of writing &quot;fantasy movie&quot; into netflix&#39;s search bar and being presented with a list of sci-fi TV series, I can write &quot;high fantasy, strong female protagonist, no romance, reviews &gt; 8, length &lt; 120&quot; and get a movie I actually <em>want</em> to watch instead of the one I have to.</p>
+<p>Companies whose service is to offer a large number of individual items, such as amazon and netflix, require a way for users to find the item(s) they want or need among the many on offer. One way for customers to do so is using tags: products are tagged with specific properties that a user can be interested in. For example: netflix tags some movies as &quot;romantic&quot;. Users interested in romantic movies can search for that and get a list of movies they&#39;re interested in. Unfortunately, these systems are often sorely lacking and provide far too little granularity. For example, Netflix only provides a few dozen tags and there is no way to search for a movie with &quot;female protagonist&quot; or &quot;gay love&quot; or &quot;urban fantasy&quot;. Furthermore, most companies only offer positive search and do not allow customers to <em>exclude</em> items with certain attributes. Tag4you offers a simple and rapid interface to accomplish all of that. Let us imagine a world in which instead of writing &quot;fantasy movie&quot; into netflix&#39;s search bar and being presented with a list of sci-fi TV series, I can write &quot;high fantasy, strong female protagonist, no romance, good music, score &gt; 8, length &lt; 120&quot; and get a movie I actually <em>want</em> to watch instead of the one I have to.</p>
 <p>Additional Information:
 The advantage of using Tag4You instead of developing the system in-house is clear: not only do you save on development costs and time, the end product is also more stable, feature-rich and provides a uniform query language which users are used to from other companies using our services.</p>
 <h1 id="ex---architectural-decision-records"><span class='task'>2.</span>  Architectural Decision Records</h1>
@@ -278,6 +278,83 @@ The advantage of using Tag4You instead of developing the system in-house is clea
 <li>quality degradation</li>
 </ul>
 </p>
+<ol>
+<li>What did you decide?</li>
+</ol>
+<h2 id="programming-language-c">Programming language: C++</h2>
+<ol start="2">
+<li>What was the context for your decision?</li>
+</ol>
+<p>A key characteristic for a tagging system is performance. Users expect low-latency answers to their queries. Moreover, the operation is in general rather expensive and many similar systems in the wild impose constraints on their users due to suboptimal performance, such as only allowing a limited number of tags per query. For that reason, the system must be built with performance in mind from the beginning. That starts with the choice of programming language. We choose C++ due to its high runtime performance. This choice will affect the entire development process.</p>
+<ol start="3">
+<li>What is the problem you are trying to solve?</li>
+</ol>
+<p>How can we increase run-time performance?</p>
+<ol start="4">
+<li>Which alternative options did you consider?</li>
+</ol>
+<p>Java, JavaScript, C++, C, Ruby</p>
+<ol start="5">
+<li>Which one did you choose?</li>
+</ol>
+<p>C++</p>
+<ol start="6">
+<li>What is the main reason for that?</li>
+</ol>
+<p>Java and JavaScript are both popular languages for building web applications, but they are both significantly less performant than C++. C has similar performance as C++, but less powerful language features and libraries, giving us less flexibility later in the process. Ruby is also in use for web development, but our programmers (i.e. me) do not have much experience with it, leading to a greater chance of bugs and increased development time due to the requirement of learning the language. Performance impact of Ruby is unknown but very unlikely to be greater than C++.</p>
+<p>C++ as a language is said to be harder to learn and develop in than other languages, however, our programmers (me) have experience with it already and should not find much trouble using it.</p>
+<ol>
+<li>What did you decide?</li>
+</ol>
+<h2 id="api-restful">API: RESTful</h2>
+<ol start="2">
+<li>What was the context for your decision?</li>
+</ol>
+<p>Our goal for commercialisation is to give access to this service to other entities, which requires ease of interface. The easier it is to interface with our system, the greater the likelihood that a potential customer will choose to employ our services. A REST API will make it easy for customers to connect to our systems. Most of the process will be unaffected by this decision - the core system still remains the same, only the layer which interfaces with the network is constrained by the type of API to provide.</p>
+<ol start="3">
+<li>What is the problem you are trying to solve?</li>
+</ol>
+<p>How can we make it as simple as possible for clients to interface with us?</p>
+<ol start="4">
+<li>Which alternative options did you consider?</li>
+</ol>
+<p>REST API, custom protocol, both</p>
+<ol start="5">
+<li>Which one did you choose?</li>
+</ol>
+<p>REST API</p>
+<ol start="6">
+<li>What is the main reason for that?</li>
+</ol>
+<p>REST APIs are commonplace and as such many programmers know well how to use them and many platforms have components, libraries or frameworks which allow interfacing with such an API easily. Particularly so in the space of web applications, which are always at least in part written in JavaScript, which is capable of interfacing with REST APIs natively. A custom API would allow us more flexibility, but come with a higher learning curve and implementation cost for clients. Some clients might find it easier to send and receive simpler messages instead of having to package everything in HTTP requests, but they are outnumbered.
+Implementing both and allowing connections to either would maximise the affordability for our clients, but increase the size and cost of the system, thus we choose against it. However, it is possible to add the second API later on, without significantly increased costs, so we choose to keep the option open and not perform any action that would permanently rule out the possibility of implementing a custom API, so that we may opt to do so if it appears that we still have some resources left after all essential components have been implemented, or as a way to grow after launch if the product is successful enough.</p>
+<ol>
+<li>What did you decide?</li>
+</ol>
+<h2 id="commercialisation-software-as-a-service">Commercialisation: software as a service</h2>
+<ol start="2">
+<li>What was the context for your decision?</li>
+</ol>
+<p>In creating this system we must consider how to make it profitable, or at least not unprofitable.
+Thus it is necessary to consider how we sell it. We choose a software as a service model as that allows us to profit continuously from every client. This requires us to expend additional resources to deploy and maintain the system, but gives us greater control of the platform we are deployed on, decreasing the requirements on portability.</p>
+<ol start="3">
+<li>What is the problem you are trying to solve?</li>
+</ol>
+<p>How do we make money from this?</p>
+<ol start="4">
+<li>Which alternative options did you consider?</li>
+</ol>
+<p>one-time purchase of software package, software as a service</p>
+<ol start="5">
+<li>Which one did you choose?</li>
+</ol>
+<p>software as a service</p>
+<ol start="6">
+<li>What is the main reason for that?</li>
+</ol>
+<p>In the software as a service model, every client is a continuous revenue stream, allowing us to profit continuously as long as they keep using our service. It also increases attractivity by decreasing the burden on the clients for deploying the system, though at the cost of an increased expense. We have determined that the pros should outweigh the cons for our clients, as the kind of system which can benefit from a tagging system is one which contains large a volume of content and therefore must already be at a minimum scale, implying high availability of resources for the client and therefore greater affordibility of the cost of our service. The SaaS model also increases affordability for a client who is not sure whether they really need our service in the long term, or has limited initial investment, as it comes with a reduced up-front cost.
+This model will require us to maintain our own servers to run the system on, but with an appropriate pricing strategy we can ensure the cost of that is outweighed by the increased profits. Furthermore, full control of the platform on which we deploy reduces the burden of ensuring portability of our system, reducing the amount of work that is necessary before we become profitable.</p>
+<p>Deploying our software on a separate server from our clients&#39; machines comes with the cost of increasing latency between queries and responses, but modern network speeds reduce it to an acceptable amount and using dedicated hardware counteracts this effect by avoiding increased processing times due to suboptimal hardware configurations or systems overloaded by other software running on the same machine.</p>
 <h1 id="ex---quality-attribute-scenario"><span class='task'>3.</span>  Quality Attribute Scenario</h1>
 <section class="instructions"><ol>
 <li><p>Pick a scenario for a specific quality attribute. Describe it with natural language.</p>

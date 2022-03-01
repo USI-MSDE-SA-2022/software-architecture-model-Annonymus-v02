@@ -1,5 +1,5 @@
 title:
-Software Architecture Model
+Software Architecture Model of Tag4You by Marco Tereh
 ---
 
 # Getting started
@@ -77,6 +77,84 @@ Exceed: >2 ADR
 
 ![Architectural Decision Record Template](./examples/decision-template.madr)
 
+1. What did you decide?
+
+## Programming language: C++
+
+2. What was the context for your decision?
+
+A key characteristic for a tagging system is performance. Users expect low-latency answers to their queries. Moreover, the operation is in general rather expensive and many similar systems in the wild impose constraints on their users due to suboptimal performance, such as only allowing a limited number of tags per query. For that reason, the system must be built with performance in mind from the beginning. That starts with the choice of programming language. We choose C++ due to its high runtime performance. This choice will affect the entire development process.
+
+3. What is the problem you are trying to solve?
+
+How can we increase run-time performance?
+
+4.  Which alternative options did you consider?
+
+Java, JavaScript, C++, C, Ruby
+
+5. Which one did you choose?
+
+C++
+
+6. What is the main reason for that?
+
+Java and JavaScript are both popular languages for building web applications, but they are both significantly less performant than C++. C has similar performance as C++, but less powerful language features and libraries, giving us less flexibility later in the process. Ruby is also in use for web development, but our programmers (i.e. me) do not have much experience with it, leading to a greater chance of bugs and increased development time due to the requirement of learning the language. Performance impact of Ruby is unknown but very unlikely to be greater than C++.
+
+C++ as a language is said to be harder to learn and develop in than other languages, however, our programmers (me) have experience with it already and should not find much trouble using it.
+
+1. What did you decide?
+
+## API: RESTful
+
+2. What was the context for your decision?
+
+Our goal for commercialisation is to give access to this service to other entities, which requires ease of interface. The easier it is to interface with our system, the greater the likelihood that a potential customer will choose to employ our services. A REST API will make it easy for customers to connect to our systems. Most of the process will be unaffected by this decision - the core system still remains the same, only the layer which interfaces with the network is constrained by the type of API to provide.
+
+3. What is the problem you are trying to solve?
+
+How can we make it as simple as possible for clients to interface with us?
+
+4.  Which alternative options did you consider?
+
+REST API, custom protocol, both
+
+5. Which one did you choose?
+
+REST API
+
+6. What is the main reason for that?
+
+REST APIs are commonplace and as such many programmers know well how to use them and many platforms have components, libraries or frameworks which allow interfacing with such an API easily. Particularly so in the space of web applications, which are always at least in part written in JavaScript, which is capable of interfacing with REST APIs natively. A custom API would allow us more flexibility, but come with a higher learning curve and implementation cost for clients. Some clients might find it easier to send and receive simpler messages instead of having to package everything in HTTP requests, but they are outnumbered.
+Implementing both and allowing connections to either would maximise the affordability for our clients, but increase the size and cost of the system, thus we choose against it. However, it is possible to add the second API later on, without significantly increased costs, so we choose to keep the option open and not perform any action that would permanently rule out the possibility of implementing a custom API, so that we may opt to do so if it appears that we still have some resources left after all essential components have been implemented, or as a way to grow after launch if the product is successful enough.
+
+1. What did you decide?
+
+## Commercialisation: software as a service
+
+2. What was the context for your decision?
+
+In creating this system we must consider how to make it profitable, or at least not unprofitable.
+Thus it is necessary to consider how we sell it. We choose a software as a service model as that allows us to profit continuously from every client. This requires us to expend additional resources to deploy and maintain the system, but gives us greater control of the platform we are deployed on, decreasing the requirements on portability.
+
+3. What is the problem you are trying to solve?
+
+How do we make money from this?
+
+4.  Which alternative options did you consider?
+
+one-time purchase of software package, software as a service
+
+5. Which one did you choose?
+
+software as a service
+
+6. What is the main reason for that?
+
+In the software as a service model, every client is a continuous revenue stream, allowing us to profit continuously as long as they keep using our service. It also increases attractivity by decreasing the burden on the clients for deploying the system, though at the cost of an increased expense. We have determined that the pros should outweigh the cons for our clients, as the kind of system which can benefit from a tagging system is one which contains large a volume of content and therefore must already be at a minimum scale, implying high availability of resources for the client and therefore greater affordibility of the cost of our service. The SaaS model also increases affordability for a client who is not sure whether they really need our service in the long term, or has limited initial investment, as it comes with a reduced up-front cost.
+This model will require us to maintain our own servers to run the system on, but with an appropriate pricing strategy we can ensure the cost of that is outweighed by the increased profits. Furthermore, full control of the platform on which we deploy reduces the burden of ensuring portability of our system, reducing the amount of work that is necessary before we become profitable.
+
+Deploying our software on a separate server from our clients' machines comes with the cost of increasing latency between queries and responses, but modern network speeds reduce it to an acceptable amount and using dedicated hardware counteracts this effect by avoiding increased processing times due to suboptimal hardware configurations or systems overloaded by other software running on the same machine.
 
 # Ex - Quality Attribute Scenario
 
