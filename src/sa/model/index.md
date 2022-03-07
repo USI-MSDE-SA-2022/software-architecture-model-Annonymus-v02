@@ -200,11 +200,11 @@ Exceed: >6 scenarios using challenging qualities
 
 }
 
-## Example Scenario
+## Maximum Latency
 
-Quality: _Recoverability_
+Quality: _Performance (Latency)_
 
-Scenario: In case of power failure, rebooting the system should take up to 20 seconds.
+Scenario: Answers to client requests should be transmitted no more than 100ms after reception of the query
 
 ```puml
 @startuml
@@ -213,20 +213,225 @@ skinparam componentStyle rectangle
 skinparam monochrome true
 skinparam shadowing false
 
-rectangle "After Power has been restored" {
+rectangle "During normal operation" {
 
-rectangle "Admin" as Source
-rectangle "max 20s" as Measure
+rectangle "User" as Source
+rectangle "max 0.1s" as Measure
 
-Source -> [System] : "Boot"
+Source -> [System] : "Query"
 
-[System] -> [Measure] : "Online"
+[System] -> [Measure] : "Reply"
 
 }
 
 @enduml
 ```
 
+Note that precise numbers in this and other scenarios are based on a very basic understanding on my part of the possibilities involved
+
+## Mutation Visibility
+
+Quality: _Correctness_
+
+Scenario: Changes to tags may take up to 60 min. for full propagation
+
+```puml
+@startuml
+
+skinparam componentStyle rectangle
+skinparam monochrome true
+skinparam shadowing false
+
+rectangle "During normal operation" {
+
+rectangle "User" as Source
+rectangle "All changes older than 1h visible" as Measure
+
+Source -> [System] : "Query"
+
+[System] -> [Measure] : "Reply"
+
+}
+
+@enduml
+```
+
+Responsiveness to write queries is not a high priority and may be sacrificed in exchange for performance of read queries or scalability.
+
+## Influence on client data
+
+Quality: _Ethics_
+
+Scenario: Weight of tags and order of result must be based entirely on objective properties of the data (such as creation date) or user-defined criteria. The system may not influence, algorithmically or by admin intervention, the results of a query.
+
+```puml
+@startuml
+
+skinparam componentStyle rectangle
+skinparam monochrome true
+skinparam shadowing false
+
+rectangle "During normal operation" {
+
+rectangle "Query" as Source
+rectangle "Transparent and objective criteria" as Measure
+
+Source -> [System] : "Result"
+
+[System] -> [Measure] : "Order"
+
+}
+
+@enduml
+```
+
+"The algorithm" must not influence results beyond the obvious or explicitly requested manner.
+
+## Intuitiveness of query language
+
+Quality: _Usability_
+
+Scenario: User should succeed in submitting the query they have in mind in less than 3 attempts.
+
+```puml
+@startuml
+
+skinparam componentStyle rectangle
+skinparam monochrome true
+skinparam shadowing false
+
+rectangle "During normal operation" {
+
+rectangle "User" as Source
+rectangle "< 1 rewrite on avg." as Measure
+
+Source -> [System] : "Query"
+
+[System] -> [Measure] : "Desired effect"
+
+}
+
+@enduml
+```
+
+The query language must be learnable quickly
+
+## Failure Mode
+
+Quality: _Safety_
+
+Scenario: System should not return incorrect or incomplete results
+
+```puml
+@startuml
+
+skinparam componentStyle rectangle
+skinparam monochrome true
+skinparam shadowing false
+
+rectangle "During a system failure" {
+
+rectangle "User" as Source
+rectangle "Error message" as Measure
+
+Source -> [System] : "Query"
+
+[System] -> [Measure] : "Reply"
+
+}
+
+@enduml
+```
+
+Failures must be transparent - if the user believes an action succeeded, it must truly be so.
+
+## Attack recovery
+
+Quality: _Recoverability_
+
+Scenario: Following a successful attack it should be possible to restore data to a known good state and resume operation within 1 day
+
+```puml
+@startuml
+
+skinparam componentStyle rectangle
+skinparam monochrome true
+skinparam shadowing false
+
+rectangle "After malicious attack occurred" {
+
+rectangle "Admin" as Source
+rectangle "max 24h" as Measure
+
+Source -> [System] : "Restore"
+
+[System] -> [Measure] : "Working Order"
+
+}
+
+@enduml
+```
+
+Intrusion must be detected and defeated within a day. Furthermore, logs and backups must be kept to allow rapid restoration of the system to a state it was in before the attacker had access to it.
+
+## DoS attack resilience
+
+Quality: _Availability_
+
+Scenario: System should be able to withstand a targeted denial of service attacks from at least 1000 unique IPs per minute without interrupting operation for regular users
+
+```puml
+@startuml
+
+skinparam componentStyle rectangle
+skinparam monochrome true
+skinparam shadowing false
+
+rectangle "During normal operation" {
+
+rectangle "Attackers" as Source
+rectangle "< 1000/m" as Measure
+
+Source -> [System] : "Flood with requests"
+
+[System] -> [Measure] : "Keep serving regular users"
+
+}
+
+@enduml
+```
+
+Increased response times and aggressive throttling are unavoidable, but users must not be prevented from making queries completely for attacks below a certain scale.
+(Actually I have no idea what scale of attack is realistic, 1000IP/m is a very rough guesstimate)
+
+## User logs
+
+Quality: _Defensibility_
+
+Scenario: System should keep logs of all users and respective write queries.
+
+```puml
+@startuml
+
+skinparam componentStyle rectangle
+skinparam monochrome true
+skinparam shadowing false
+
+rectangle "During normal operation" {
+
+rectangle "User" as Source
+rectangle "Logs exist" as Measure
+
+Source -> [System] : "Perform data modification"
+
+[System] -> [Measure]
+
+}
+
+@enduml
+```
+
+Activity logs help in detection of and recovery from attacks and credential leaks both for our service as a whole and for our clients' individual databases
 
 # Ex - Quality Attribute Tradeoff
 
@@ -244,9 +449,19 @@ Exceed: >2 trade-offs
 
 }
 
-## Portability vs. Performance (Example)
+## Privacy vs. Defensibility
 
-Developing an app natively for each OS is expensive and time consuming, but it benefits from a good performance. Choosing a cross-platform environment on the other hand simplify the development process, making it faster and cheaper, but it might suffer in performance.
+Keeping high-detail logs of everything that goes on on your system and everything that your users do is very useful for detecting and defeating intrusions as well as rolling back any changes that an attacker may have made, but it is a raises huge privacy concerns (also confidentiality but I had to choose one)
+
+## Defensibility vs. Simplicity
+
+A simple system is easier to attack - complexity makes it more difficult to find and exploit vulnerabilities. That said, this is a tradeoff that is almost always heavily skewed towards simplicity - as we know, security through obscurity is not feasible. Moreover, simplicity has a lot of benefits on its own. Therefore, when we reduce simplicity to increase defensibility, it is always done in a later step, with a simpler system as a base, using code obfuscation and similar techniques.
+
+## Feasability vs. Usability
+(actually affordability vs. accessibility but these two qualities were missing for some reason)
+
+An important aspect of usability is accessibility - systems with low accessibility are extremely unusable for people with impairments. Hence, to increase usability, one must make their systems accessible. However, accessibility is expensive and will significantly increase the time required to develop your product, as well as the cost of doing so.
+
 
 # Ex - Feature Modeling
 
