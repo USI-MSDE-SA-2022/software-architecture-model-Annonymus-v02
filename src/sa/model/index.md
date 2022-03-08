@@ -462,6 +462,15 @@ A simple system is easier to attack - complexity makes it more difficult to find
 
 An important aspect of usability is accessibility - systems with low accessibility are extremely unusable for people with impairments. Hence, to increase usability, one must make their systems accessible. However, accessibility is expensive and will significantly increase the time required to develop your product, as well as the cost of doing so.
 
+Note that this tradeoff has already been claimed by somebody else - when I wrote it I wasn't sure if all the tradeoffs had to be unique. For grading purposes, ignore this one.
+
+## Usability and Performance
+Usability and performance go hand in hand - a system with bad performance is also unusable
+as users become annoyed at waiting times. This effect is especially strong when performance
+goes below user reaction speed - i.e. when they are thinking ahead of the program.
+When users write or press buttons faster than they are processed, the forced waiting interrupts
+their train of thought, worsening not only experience but also function
+
 
 # Ex - Feature Modeling
 

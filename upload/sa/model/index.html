@@ -367,14 +367,56 @@ This model will require us to maintain our own servers to run the system on, but
 <p><em>Environment</em>: context under which stimulus occurred (e.g., build, test, deployment, startup, normal operation, overload, failure, attack, change)</p>
 <p><em>Response</em>: observable result of the stimulus</p>
 <p><em>Measure</em>: benchmark or target value defining a successful response</p>
-<section class="pass"><span>&starf;&star;&star;: </span>3 scenarios</section><section class="ok"><span>&starf;&starf;&star;: </span>&gt;3 scenarios</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;6 scenarios using challenging qualities</section></section><h2 id="example-scenario">Example Scenario</h2>
+<section class="pass"><span>&starf;&star;&star;: </span>3 scenarios</section><section class="ok"><span>&starf;&starf;&star;: </span>&gt;3 scenarios</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;6 scenarios using challenging qualities</section></section><h2 id="maximum-latency">Maximum Latency</h2>
+<p>Quality: <em>Performance (Latency)</em></p>
+<p>Scenario: Answers to client requests should be transmitted no more than 100ms after reception of the query</p>
+<img src="./puml_e1.svg"><p>Note that precise numbers in this and other scenarios are based on a very basic understanding on my part of the possibilities involved</p>
+<h2 id="mutation-visibility">Mutation Visibility</h2>
+<p>Quality: <em>Correctness</em></p>
+<p>Scenario: Changes to tags may take up to 60 min. for full propagation</p>
+<img src="./puml_e2.svg"><p>Responsiveness to write queries is not a high priority and may be sacrificed in exchange for performance of read queries or scalability.</p>
+<h2 id="influence-on-client-data">Influence on client data</h2>
+<p>Quality: <em>Ethics</em></p>
+<p>Scenario: Weight of tags and order of result must be based entirely on objective properties of the data (such as creation date) or user-defined criteria. The system may not influence, algorithmically or by admin intervention, the results of a query.</p>
+<img src="./puml_e3.svg"><p>&quot;The algorithm&quot; must not influence results beyond the obvious or explicitly requested manner.</p>
+<h2 id="intuitiveness-of-query-language">Intuitiveness of query language</h2>
+<p>Quality: <em>Usability</em></p>
+<p>Scenario: User should succeed in submitting the query they have in mind in less than 3 attempts.</p>
+<img src="./puml_e4.svg"><p>The query language must be learnable quickly</p>
+<h2 id="failure-mode">Failure Mode</h2>
+<p>Quality: <em>Safety</em></p>
+<p>Scenario: System should not return incorrect or incomplete results</p>
+<img src="./puml_e5.svg"><p>Failures must be transparent - if the user believes an action succeeded, it must truly be so.</p>
+<h2 id="attack-recovery">Attack recovery</h2>
 <p>Quality: <em>Recoverability</em></p>
-<p>Scenario: In case of power failure, rebooting the system should take up to 20 seconds.</p>
-<img src="./puml_e1.svg"><h1 id="ex---quality-attribute-tradeoff"><span class='task'>4.</span>  Quality Attribute Tradeoff</h1>
+<p>Scenario: Following a successful attack it should be possible to restore data to a known good state and resume operation within 1 day</p>
+<img src="./puml_e6.svg"><p>Intrusion must be detected and defeated within a day. Furthermore, logs and backups must be kept to allow rapid restoration of the system to a state it was in before the attacker had access to it.</p>
+<h2 id="dos-attack-resilience">DoS attack resilience</h2>
+<p>Quality: <em>Availability</em></p>
+<p>Scenario: System should be able to withstand a targeted denial of service attacks from at least 1000 unique IPs per minute without interrupting operation for regular users</p>
+<img src="./puml_e7.svg"><p>Increased response times and aggressive throttling are unavoidable, but users must not be prevented from making queries completely for attacks below a certain scale.
+(Actually I have no idea what scale of attack is realistic, 1000IP/m is a very rough guesstimate)</p>
+<h2 id="user-logs">User logs</h2>
+<p>Quality: <em>Defensibility</em></p>
+<p>Scenario: System should keep logs of all users and respective write queries.</p>
+<img src="./puml_e8.svg"><p>Activity logs help in detection of and recovery from attacks and credential leaks both for our service as a whole and for our clients&#39; individual databases</p>
+<h1 id="ex---quality-attribute-tradeoff"><span class='task'>4.</span>  Quality Attribute Tradeoff</h1>
 <section class="instructions"><p>Pick a free combination of two qualities on the <a href="https://usi365.sharepoint.com/:x:/s/MSDE-2022-SoftwareArchitecture/ESVksoXVgMNHtKBKrIwatMYBqorOFaKjxnoqssEy0gNPCg?e=81W7SI">map</a> and write your name to claim it.</p>
 <p>Then write a short text giving an example for the tradeoff in this assignment.</p>
-<section class="pass"><span>&starf;&star;&star;: </span>1 unique trade-off</section><section class="ok"><span>&starf;&starf;&star;: </span>2 trade-offs</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;2 trade-offs</section></section><h2 id="portability-vs-performance-example">Portability vs. Performance (Example)</h2>
-<p>Developing an app natively for each OS is expensive and time consuming, but it benefits from a good performance. Choosing a cross-platform environment on the other hand simplify the development process, making it faster and cheaper, but it might suffer in performance.</p>
+<section class="pass"><span>&starf;&star;&star;: </span>1 unique trade-off</section><section class="ok"><span>&starf;&starf;&star;: </span>2 trade-offs</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;2 trade-offs</section></section><h2 id="privacy-vs-defensibility">Privacy vs. Defensibility</h2>
+<p>Keeping high-detail logs of everything that goes on on your system and everything that your users do is very useful for detecting and defeating intrusions as well as rolling back any changes that an attacker may have made, but it is a raises huge privacy concerns (also confidentiality but I had to choose one)</p>
+<h2 id="defensibility-vs-simplicity">Defensibility vs. Simplicity</h2>
+<p>A simple system is easier to attack - complexity makes it more difficult to find and exploit vulnerabilities. That said, this is a tradeoff that is almost always heavily skewed towards simplicity - as we know, security through obscurity is not feasible. Moreover, simplicity has a lot of benefits on its own. Therefore, when we reduce simplicity to increase defensibility, it is always done in a later step, with a simpler system as a base, using code obfuscation and similar techniques.</p>
+<h2 id="feasability-vs-usability">Feasability vs. Usability</h2>
+<p>(actually affordability vs. accessibility but these two qualities were missing for some reason)</p>
+<p>An important aspect of usability is accessibility - systems with low accessibility are extremely unusable for people with impairments. Hence, to increase usability, one must make their systems accessible. However, accessibility is expensive and will significantly increase the time required to develop your product, as well as the cost of doing so.</p>
+<p>Note that this tradeoff has already been claimed by somebody else - when I wrote it I wasn&#39;t sure if all the tradeoffs had to be unique. For grading purposes, ignore this one.</p>
+<h2 id="usability-and-performance">Usability and Performance</h2>
+<p>Usability and performance go hand in hand - a system with bad performance is also unusable
+as users become annoyed at waiting times. This effect is especially strong when performance
+goes below user reaction speed - i.e. when they are thinking ahead of the program.
+When users write or press buttons faster than they are processed, the forced waiting interrupts
+their train of thought, worsening not only experience but also function</p>
 <h1 id="ex---feature-modeling"><span class='task'>5.</span>  Feature Modeling</h1>
 <section class="instructions"><p>In the context of your chosen project domain, describe your domain using a feature model.</p>
 <p>The feature model should be correctly visualized using the following template:</p>
@@ -398,7 +440,7 @@ This model will require us to maintain our own servers to run the system on, but
 <p>You can add additional process views showing how other use cases can be satisfied by the same set of components.</p>
 <p>This assignment will focus on modularity-related decisions, we will worry about deployment and the container view later.</p>
 <p>Here is a PlantUML example logical view and process view.</p>
-<img src="./puml_e2.svg"><img src="./puml_e3.svg"><section class="hint"><span>Hint: </span>How to connect sub-components to other external components? Use this pattern.</section><img src="./puml_e4.svg"><section class="pass"><span>&starf;&star;&star;: </span>6 components (1 decomposed), 1 use case/process view</section><section class="ok"><span>&starf;&starf;&star;: </span>6 components (1 decomposed), 2 use case/process view</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;6 components (&gt;1 decomposed) and &gt;2 use case/process view</section></section><h2 id="logical-view">Logical View</h2>
+<img src="./puml_e9.svg"><img src="./puml_e10.svg"><section class="hint"><span>Hint: </span>How to connect sub-components to other external components? Use this pattern.</section><img src="./puml_e11.svg"><section class="pass"><span>&starf;&star;&star;: </span>6 components (1 decomposed), 1 use case/process view</section><section class="ok"><span>&starf;&starf;&star;: </span>6 components (1 decomposed), 2 use case/process view</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;6 components (&gt;1 decomposed) and &gt;2 use case/process view</section></section><h2 id="logical-view">Logical View</h2>
 <h2 id="process-views">Process Views</h2>
 <p>Use Case:</p>
 <h1 id="ex---component-model-bottom-up"><span class='task'>8.</span>  Component Model: Bottom-Up</h1>
