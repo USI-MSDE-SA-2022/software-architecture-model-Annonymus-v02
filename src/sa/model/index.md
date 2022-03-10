@@ -258,6 +258,12 @@ Source -> [System] : "Query"
 
 Responsiveness to write queries is not a high priority and may be sacrificed in exchange for performance of read queries or scalability.
 
+{.feedback
+
+This type of Correctness is also known as Read-Write Consistency.
+
+}
+
 ## Influence on client data
 
 Quality: _Ethics_
@@ -432,6 +438,13 @@ Source -> [System] : "Perform data modification"
 ```
 
 Activity logs help in detection of and recovery from attacks and credential leaks both for our service as a whole and for our clients' individual databases
+
+{.feedback
+
++ This may also be called Auditability. 
++ The Event Sourcing pattern helps to deliver it.
+
+}
 
 # Ex - Quality Attribute Tradeoff
 
