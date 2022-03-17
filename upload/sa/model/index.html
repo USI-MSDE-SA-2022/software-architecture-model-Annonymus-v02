@@ -375,7 +375,8 @@ This model will require us to maintain our own servers to run the system on, but
 <p>Quality: <em>Correctness</em></p>
 <p>Scenario: Changes to tags may take up to 60 min. for full propagation</p>
 <img src="./puml_e2.svg"><p>Responsiveness to write queries is not a high priority and may be sacrificed in exchange for performance of read queries or scalability.</p>
-<h2 id="influence-on-client-data">Influence on client data</h2>
+<section class="feedback"><p>This type of Correctness is also known as Read-Write Consistency.</p>
+</section><h2 id="influence-on-client-data">Influence on client data</h2>
 <p>Quality: <em>Ethics</em></p>
 <p>Scenario: Weight of tags and order of result must be based entirely on objective properties of the data (such as creation date) or user-defined criteria. The system may not influence, algorithmically or by admin intervention, the results of a query.</p>
 <img src="./puml_e3.svg"><p>&quot;The algorithm&quot; must not influence results beyond the obvious or explicitly requested manner.</p>
@@ -400,7 +401,11 @@ This model will require us to maintain our own servers to run the system on, but
 <p>Quality: <em>Defensibility</em></p>
 <p>Scenario: System should keep logs of all users and respective write queries.</p>
 <img src="./puml_e8.svg"><p>Activity logs help in detection of and recovery from attacks and credential leaks both for our service as a whole and for our clients&#39; individual databases</p>
-<h1 id="ex---quality-attribute-tradeoff"><span class='task'>4.</span>  Quality Attribute Tradeoff</h1>
+<section class="feedback"><ul>
+<li>This may also be called Auditability. </li>
+<li>The Event Sourcing pattern helps to deliver it.</li>
+</ul>
+</section><h1 id="ex---quality-attribute-tradeoff"><span class='task'>4.</span>  Quality Attribute Tradeoff</h1>
 <section class="instructions"><p>Pick a free combination of two qualities on the <a href="https://usi365.sharepoint.com/:x:/s/MSDE-2022-SoftwareArchitecture/ESVksoXVgMNHtKBKrIwatMYBqorOFaKjxnoqssEy0gNPCg?e=81W7SI">map</a> and write your name to claim it.</p>
 <p>Then write a short text giving an example for the tradeoff in this assignment.</p>
 <section class="pass"><span>&starf;&star;&star;: </span>1 unique trade-off</section><section class="ok"><span>&starf;&starf;&star;: </span>2 trade-offs</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;2 trade-offs</section></section><h2 id="privacy-vs-defensibility">Privacy vs. Defensibility</h2>
