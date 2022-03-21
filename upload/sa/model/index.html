@@ -402,7 +402,7 @@ This model will require us to maintain our own servers to run the system on, but
 <p>Scenario: System should keep logs of all users and respective write queries.</p>
 <img src="./puml_e8.svg"><p>Activity logs help in detection of and recovery from attacks and credential leaks both for our service as a whole and for our clients&#39; individual databases</p>
 <section class="feedback"><ul>
-<li>This may also be called Auditability. </li>
+<li>This may also be called Auditability.</li>
 <li>The Event Sourcing pattern helps to deliver it.</li>
 </ul>
 </section><h1 id="ex---quality-attribute-tradeoff"><span class='task'>4.</span>  Quality Attribute Tradeoff</h1>
@@ -425,14 +425,30 @@ their train of thought, worsening not only experience but also function</p>
 <h1 id="ex---feature-modeling"><span class='task'>5.</span>  Feature Modeling</h1>
 <section class="instructions"><p>In the context of your chosen project domain, describe your domain using a feature model.</p>
 <p>The feature model should be correctly visualized using the following template:</p>
-<p><img src="./puml_0.svg" alt="Example Feature Model Diagram"></p>
+<p><img src="./fml_0.svg" alt="Example Feature Model Diagram"></p>
 <p>If possible, make use of all modeling constructs.</p>
-<section class="pass"><span>&starf;&star;&star;: </span>Include at least 4 non-trivial features</section><section class="ok"><span>&starf;&starf;&star;: </span>Include at least 6 non-trivial features, which are all implemented by your project</section><section class="exceed"><span>&starf;&starf;&starf;: </span>Include more than 8 non-trivial features, indicate which are found in your project and which belong to one competitor</section></section><h1 id="ex---context-diagram"><span class='task'>6.</span>  Context Diagram</h1>
+<section class="pass"><span>&starf;&star;&star;: </span>Include at least 4 non-trivial features</section><section class="ok"><span>&starf;&starf;&star;: </span>Include at least 6 non-trivial features, which are all implemented by your project</section><section class="exceed"><span>&starf;&starf;&starf;: </span>Include more than 8 non-trivial features, indicate which are found in your project and which belong to one competitor</section></section><p><img src="./fml_1.svg" alt="Feature Model Diagram">
+The root, Queries, Data modification, Access control, Content Tagging and Result presentation features are not optional and implemented by all competitors.
+One competitor, Netflix, has an extremely barebones implementation, with no other features added.
+Searching around for a bit I managed to find a competitor with a more interesting system to compare to: vndb.org, a database of visual novels. Their tagging system has the following additional features:</p>
+<ul>
+<li>Computer-readable format</li>
+<li>Weighted tags</li>
+<li>Tag aliases</li>
+<li>Sub-tags/categories</li>
+<li>Tag attributes e.g. spoiler</li>
+<li>Tag filter</li>
+<li>Sorting</li>
+<li>Client-supplied attributes (except of course they are themselves the client)</li>
+<li>Paging</li>
+<li>Variable page size</li>
+</ul>
+<h1 id="ex---context-diagram"><span class='task'>6.</span>  Context Diagram</h1>
 <section class="instructions"><p>Prepare a context diagram to define the design boundary for your project.</p>
 <p>Here is a PlantUML/C4 example to get started.</p>
-<p><img src="./puml_1.svg" alt="Example Context Diagram"></p>
+<p><img src="./puml_0.svg" alt="Example Context Diagram"></p>
 <p>Make sure to include all possible user personas and external dependencies you may need.</p>
-<section class="pass"><span>&starf;&star;&star;: </span>1 User and 1 Dependency</section><section class="ok"><span>&starf;&starf;&star;: </span>&gt;1 User and &gt;1 Dependency</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;1 User and &gt;1 Dependency, with both incoming and outgoing dependencies</section></section><h1 id="ex---component-model-top-down"><span class='task'>7.</span>  Component Model: Top-Down</h1>
+<section class="pass"><span>&starf;&star;&star;: </span>1 User and 1 Dependency</section><section class="ok"><span>&starf;&starf;&star;: </span>&gt;1 User and &gt;1 Dependency</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;1 User and &gt;1 Dependency, with both incoming and outgoing dependencies</section></section><img src="./puml_e9.svg"><h1 id="ex---component-model-top-down"><span class='task'>7.</span>  Component Model: Top-Down</h1>
 <section class="instructions"><p>Within the context of your project domain, represent a model of your modular software architecture decomposed into components.</p>
 <p>The number of components in your logical view should be between 6 and 9:</p>
 <ul>
@@ -445,7 +461,7 @@ their train of thought, worsening not only experience but also function</p>
 <p>You can add additional process views showing how other use cases can be satisfied by the same set of components.</p>
 <p>This assignment will focus on modularity-related decisions, we will worry about deployment and the container view later.</p>
 <p>Here is a PlantUML example logical view and process view.</p>
-<img src="./puml_e9.svg"><img src="./puml_e10.svg"><section class="hint"><span>Hint: </span>How to connect sub-components to other external components? Use this pattern.</section><img src="./puml_e11.svg"><section class="pass"><span>&starf;&star;&star;: </span>6 components (1 decomposed), 1 use case/process view</section><section class="ok"><span>&starf;&starf;&star;: </span>6 components (1 decomposed), 2 use case/process view</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;6 components (&gt;1 decomposed) and &gt;2 use case/process view</section></section><h2 id="logical-view">Logical View</h2>
+<img src="./puml_e10.svg"><img src="./puml_e11.svg"><section class="hint"><span>Hint: </span>How to connect sub-components to other external components? Use this pattern.</section><img src="./puml_e12.svg"><section class="pass"><span>&starf;&star;&star;: </span>6 components (1 decomposed), 1 use case/process view</section><section class="ok"><span>&starf;&starf;&star;: </span>6 components (1 decomposed), 2 use case/process view</section><section class="exceed"><span>&starf;&starf;&starf;: </span>&gt;6 components (&gt;1 decomposed) and &gt;2 use case/process view</section></section><h2 id="logical-view">Logical View</h2>
 <h2 id="process-views">Process Views</h2>
 <p>Use Case:</p>
 <h1 id="ex---component-model-bottom-up"><span class='task'>8.</span>  Component Model: Bottom-Up</h1>
@@ -463,9 +479,9 @@ their train of thought, worsening not only experience but also function</p>
 </ol>
 <p>Get started with one of these PlantUML templates, or you can come up with your own notation to describe the interfaces, as long as it includes all the necessary details.</p>
 <p>The first template describes separately the provided/required interfaces of each component.</p>
-<p><img src="./puml_2.svg" alt="Separate Required/Provided Interfaces"></p>
+<p><img src="./puml_1.svg" alt="Separate Required/Provided Interfaces"></p>
 <p>The second template annotates the logical view with the interface descriptions: less redundant, but needs the logical dependencies to be modeled to show which are the required interfaces.</p>
-<p><img src="./puml_3.svg" alt="Shared Interfaces"></p>
+<p><img src="./puml_2.svg" alt="Shared Interfaces"></p>
 <section class="pass"><span>&starf;&star;&star;: </span>define interfaces of all outer-level components</section><section class="ok"><span>&starf;&starf;&star;: </span>Define interfaces of all outer-level components. Does your architecture publish a Web API? If not, extend it so that it does.</section><section class="exceed"><span>&starf;&starf;&starf;: </span>Also, document the Web API using the OpenAPI language. You can use the <a href="http://api-ace.inf.usi.ch/openapi-to-tree/">OpenAPI-to-Tree</a> tool to visualize the structure of your OpenAPI description.</section></section><h1 id="ex---connector-view"><span class='task'>10.</span>  Connector View</h1>
 <section class="instructions"><p>Extend your existing models introducing the connector view</p>
 <p>For every pair of connected components (logical view), pick the most suitable connector. Existing components can play the role of connector, or new connectors may need to be introduced.</p>

@@ -441,7 +441,7 @@ Activity logs help in detection of and recovery from attacks and credential leak
 
 {.feedback
 
-+ This may also be called Auditability. 
++ This may also be called Auditability.
 + The Event Sourcing pattern helps to deliver it.
 
 }
@@ -493,7 +493,7 @@ In the context of your chosen project domain, describe your domain using a featu
 
 The feature model should be correctly visualized using the following template:
 
-![Example Feature Model Diagram](./examples/feature.puml)
+![Example Feature Model Diagram](./examples/feature.fml)
 
 If possible, make use of all modeling constructs.
 
@@ -505,6 +505,20 @@ Exceed: Include more than 8 non-trivial features, indicate which are found in yo
 
 }
 
+![Feature Model Diagram](./model.fml)
+The root, Queries, Data modification, Access control, Content Tagging and Result presentation features are not optional and implemented by all competitors.
+One competitor, Netflix, has an extremely barebones implementation, with no other features added.
+Searching around for a bit I managed to find a competitor with a more interesting system to compare to: vndb.org, a database of visual novels. Their tagging system has the following additional features:
+ - Computer-readable format
+ - Weighted tags
+ - Tag aliases
+ - Sub-tags/categories
+ - Tag attributes e.g. spoiler
+ - Tag filter
+ - Sorting
+ - Client-supplied attributes (except of course they are themselves the client)
+ - Paging
+ - Variable page size
 
 # Ex - Context Diagram
 
@@ -526,7 +540,28 @@ Exceed: >1 User and >1 Dependency, with both incoming and outgoing dependencies
 
 }
 
+```puml
+@startuml
+!include <C4/C4_Container>
 
+Person(user_r, "Read-only user", "")
+Person(user_w, "Privileged user", "")
+Person(user_a, "Sysadmin", "")
+
+System_Boundary(boundary, "Coeus") {
+
+}
+
+System_Ext(db, "DBMS")
+System_Ext(web, "Client website")
+
+Rel(user_r, web, "Perform Queries")
+Rel(user_w, boundary, "Add/remove/edit tags and items")
+Rel(user_a, boundary, "Manage permissions and databases")
+Rel(boundary, db, "Store and retrieve", "raw data")
+Rel(web, boundary, "translate or forward query")
+@enduml
+```
 
 
 # Ex - Component Model: Top-Down
