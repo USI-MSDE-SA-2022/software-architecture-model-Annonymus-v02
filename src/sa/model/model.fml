@@ -45,7 +45,8 @@ Coeus formerly Tag4You: [
         Sub-tags/categories,
         Exclusive tags,
         /// vndb
-        Tag attributes e.g. spoiler
+        Tag attributes e.g. spoiler,
+        Tag descriptions
     ),
     [*] Data modification : [
         [ ] Default tags, /// binary tags are just "off" by default, but could have
