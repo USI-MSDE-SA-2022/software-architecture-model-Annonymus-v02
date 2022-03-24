@@ -678,6 +678,7 @@ Exceed: >6 components (>1 decomposed) and >2 use case/process view
 skinparam componentStyle rectangle
 
 !include <tupadr3/font-awesome/database>
+!include <tupadr3/font-awesome/undo>
 
 title Coeus Logical View
 interface " " as DB_I
@@ -689,8 +690,8 @@ interface " " as CAPI_I
 [Database <$database{scale=0.33}>] as DB
 note bottom of DB: MySQL docker image can be obtained for free here: https://hub.docker.com/_/mysql
 component API {
-    [Client API] as CAPI
-    [Admin API] as ADM_API
+    [Client API <$undo{scale=0.33}>] as CAPI
+    [Admin API <$undo{scale=0.33}>] as ADM_API
 }
 component "Query Engine" {
     interface " " as PROC_I
@@ -733,6 +734,7 @@ skinparam defaultFontName Courier
 ```puml
 @startuml
 title Coeus "User Query" Process View
+autoactivate on
 
 participant "Client API" as CAPI
 participant "Auth Service" as AUTH
@@ -745,10 +747,10 @@ participant "Database" as DB
 
 CAPI -> PROC: Perform Query
 PROC -> PARSE: Parse Query
-PROC <- PARSE: Query Details
+return Query Details
 PROC -> DB: Retrieve Data
-PROC <- DB: Result
-CAPI <- PROC: Result
+return Result
+return Result
 
 skinparam monochrome true
 skinparam shadowing false
@@ -759,6 +761,7 @@ skinparam defaultFontName Courier
 ```puml
 @startuml
 title Coeus "Mutation Query" Process View
+autoactivate off
 
 participant "Client API" as CAPI
 participant "Auth Service" as AUTH
@@ -769,15 +772,16 @@ participant "Admin API" as ADM_API
 participant "Client Management System" as ADM
 participant "Database" as DB
 
-CAPI -> AUTH: Check credentials
+CAPI -> AUTH ++: Check credentials
 alt Unauthorised
 CAPI <-- AUTH: Failure
 else Authorised
-CAPI <-- AUTH: Success
-CAPI -> MUT: Perform Command
-MUT -> DB: Execute changes
-MUT <-- DB: Success
-CAPI <-- MUT: Success
+'activate PROC
+return Success
+CAPI -> MUT ++: Perform Command
+MUT -> DB ++: Execute changes
+return Success
+return Success
 end
 
 skinparam monochrome true
@@ -789,6 +793,7 @@ skinparam defaultFontName Courier
 ```puml
 @startuml
 title Coeus "Contract Changes" Process View
+autoactivate on
 
 participant "Client API" as CAPI
 participant "Auth Service" as AUTH
@@ -801,8 +806,8 @@ participant "Database" as DB
 
 ADM_API -> ADM: Add/edit/remove client
 ADM -> DB: Structural changes
-ADM <-- DB: Success
-ADM_API <-- ADM: Success
+return Success
+return  Success
 
 skinparam monochrome true
 skinparam shadowing false
