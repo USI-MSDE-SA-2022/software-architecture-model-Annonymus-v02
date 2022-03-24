@@ -672,12 +672,145 @@ Exceed: >6 components (>1 decomposed) and >2 use case/process view
 
 ## Logical View
 
+API
+DB
+Auth
+Query processing engine
+ - read queries
+   - parser
+ - write queries
+Data management system
+
+```puml
+@startuml
+skinparam componentStyle rectangle
+
+!include <tupadr3/font-awesome/database>
+
+title Coeus Logical View
+interface " " as DB_I
+interface " " as AUTH_I
+interface " " as MUT_I
+interface " " as ADM_I
+[Database <$database{scale=0.33}>] as DB
+component API {
+    [Client API] as CAPI
+    [Admin API] as ADM_API
+}
+component "Query Engine" {
+    interface " " as PROC_I
+    interface " " as PARSE_I
+    [Query Parser] as PARSE
+    [Query Processor] as PROC
+}
+[Auth Service] as AUTH
+[Mutation Processor] as MUT
+[Data Management System] as ADM
+
+DB_I -- DB
+AUTH_I - AUTH
+PROC_I -- PROC
+PARSE - PARSE_I
+MUT_I -- MUT
+ADM - ADM_I
+
+PARSE_I )- PROC
+CAPI --( PROC_I
+PROC --( DB_I
+CAPI -( AUTH_I
+CAPI --( MUT_I
+MUT --( DB_I
+ADM_I )- ADM_API
+ADM --( DB_I
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
 
 
 ## Process Views
 
-Use Case:
+```puml
+@startuml
+title Coeus "User Query" Process View
 
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Query Processor" as PROC
+participant "Query Parser" as PARSE
+participant "Mutation Processor" as MUT
+participant "Admin API" as ADM_API
+participant "Data Management System" as ADM
+participant "Database" as DB
+
+CAPI -> PROC: Perform Query
+PROC -> PARSE: Parse Query
+PROC <- PARSE: Query Details
+PROC -> DB: Retrieve Data
+PROC <- DB: Result
+CAPI <- PROC: Result
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+```puml
+@startuml
+title Coeus "Mutation Query" Process View
+
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Query Processor" as PROC
+participant "Query Parser" as PARSE
+participant "Mutation Processor" as MUT
+participant "Admin API" as ADM_API
+participant "Data Management System" as ADM
+participant "Database" as DB
+
+CAPI -> AUTH: Check credentials
+alt Unauthorised
+CAPI <- AUTH: Failure
+else Authorised
+CAPI <- AUTH: Success
+CAPI -> MUT: Perform Command
+MUT -> DB: Execute changes
+MUT <- DB: Success
+CAPI <- MUT: Success
+end
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+```puml
+@startuml
+title Coeus "Contract Changes" Process View
+
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Query Processor" as PROC
+participant "Query Parser" as PARSE
+participant "Mutation Processor" as MUT
+participant "Admin API" as ADM_API
+participant "Data Management System" as ADM
+participant "Database" as DB
+
+ADM_API -> ADM: Add/edit/remove client
+ADM -> DB: Structural changes
+ADM <- DB: Success
+ADM_API <- ADM: Success
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
 
 
 # Ex - Component Model: Bottom-Up
