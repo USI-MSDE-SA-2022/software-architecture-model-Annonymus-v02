@@ -672,14 +672,6 @@ Exceed: >6 components (>1 decomposed) and >2 use case/process view
 
 ## Logical View
 
-API
-DB
-Auth
-Query processing engine
- - read queries
-   - parser
- - write queries
-Data management system
 
 ```puml
 @startuml
@@ -689,10 +681,13 @@ skinparam componentStyle rectangle
 
 title Coeus Logical View
 interface " " as DB_I
-interface " " as AUTH_I
 interface " " as MUT_I
 interface " " as ADM_I
+interface " " as ADM_API_I
+interface " " as CAPI_I
+' mysql: https://hub.docker.com/_/mysql (free)
 [Database <$database{scale=0.33}>] as DB
+note bottom of DB: MySQL docker image can be obtained for free here: https://hub.docker.com/_/mysql
 component API {
     [Client API] as CAPI
     [Admin API] as ADM_API
@@ -703,20 +698,23 @@ component "Query Engine" {
     [Query Parser] as PARSE
     [Query Processor] as PROC
 }
+interface " " as AUTH_I
 [Auth Service] as AUTH
 [Mutation Processor] as MUT
-[Data Management System] as ADM
+[Client Management System] as ADM
 
 DB_I -- DB
-AUTH_I - AUTH
 PROC_I -- PROC
 PARSE - PARSE_I
 MUT_I -- MUT
 ADM - ADM_I
+ADM_API_I -- ADM_API
+CAPI_I -- CAPI
 
 PARSE_I )- PROC
 CAPI --( PROC_I
 PROC --( DB_I
+AUTH_I - AUTH
 CAPI -( AUTH_I
 CAPI --( MUT_I
 MUT --( DB_I
@@ -742,7 +740,7 @@ participant "Query Processor" as PROC
 participant "Query Parser" as PARSE
 participant "Mutation Processor" as MUT
 participant "Admin API" as ADM_API
-participant "Data Management System" as ADM
+participant "Client Management System" as ADM
 participant "Database" as DB
 
 CAPI -> PROC: Perform Query
@@ -768,18 +766,18 @@ participant "Query Processor" as PROC
 participant "Query Parser" as PARSE
 participant "Mutation Processor" as MUT
 participant "Admin API" as ADM_API
-participant "Data Management System" as ADM
+participant "Client Management System" as ADM
 participant "Database" as DB
 
 CAPI -> AUTH: Check credentials
 alt Unauthorised
-CAPI <- AUTH: Failure
+CAPI <-- AUTH: Failure
 else Authorised
-CAPI <- AUTH: Success
+CAPI <-- AUTH: Success
 CAPI -> MUT: Perform Command
 MUT -> DB: Execute changes
-MUT <- DB: Success
-CAPI <- MUT: Success
+MUT <-- DB: Success
+CAPI <-- MUT: Success
 end
 
 skinparam monochrome true
@@ -798,13 +796,13 @@ participant "Query Processor" as PROC
 participant "Query Parser" as PARSE
 participant "Mutation Processor" as MUT
 participant "Admin API" as ADM_API
-participant "Data Management System" as ADM
+participant "Client Management System" as ADM
 participant "Database" as DB
 
 ADM_API -> ADM: Add/edit/remove client
 ADM -> DB: Structural changes
-ADM <- DB: Success
-ADM_API <- ADM: Success
+ADM <-- DB: Success
+ADM_API <-- ADM: Success
 
 skinparam monochrome true
 skinparam shadowing false
