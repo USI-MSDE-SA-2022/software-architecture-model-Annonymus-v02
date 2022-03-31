@@ -836,6 +836,271 @@ Exceed: Redesign based on >3 reused components (1 Logical View, >1 Process View,
 
 }
 
+Note: if I ever actually do this there's no way in hell I'll use all those things,
+but for the sake of the assignment, these are components that could in theory be
+reused.
+
+```puml
+@startuml
+skinparam componentStyle rectangle
+
+!include <tupadr3/font-awesome/database>
+!include <tupadr3/font-awesome/undo>
+
+title Coeus Logical View
+interface " " as DB_I
+interface " " as MUT_I
+[Client Management System] as ADM
+interface " " as ADM_I
+interface " " as ADM_API_I
+interface " " as CAPI_I
+[Database <$database{scale=0.33}>] as DB
+note bottom of DB: [[https://dev.mysql.com/doc/refman/8.0/en/ MySQL]] docker image can be obtained for free [[https://hub.docker.com/_/mysql here]]
+component API {
+    [Client API <$undo{scale=0.33}>] as CAPI
+    [Admin API <$undo{scale=0.33}>] as ADM_API
+}
+component "Query Engine" {
+    interface " " as PROC_I
+    interface " " as PARSE_I
+    [Query Parser] as PARSE
+    note top of PARSE: [[https://lexy.foonathan.net lexy]] - free
+    [Query Processor] as PROC
+}
+interface " " as AUTH_I
+interface " " as AUTH_I2
+note top of AUTH_I2: [[https://oauth.net/2/ OAuth]] - free
+[Auth Service] as AUTH
+AUTH_I2 -- AUTH
+[Mutation Processor] as MUT
+
+interface " " as DEPL_I
+[Deployment Manager] as DEPL
+note top of DEPL: [[https://docs.aws.amazon.com/ec2/index.html AWS]] - 0.2-37 $/h
+DEPL_I -- DEPL
+ADM --( DEPL_I
+
+DB_I -- DB
+PROC_I -- PROC
+PARSE - PARSE_I
+MUT_I -- MUT
+ADM - ADM_I
+ADM_API_I -- ADM_API
+CAPI_I -- CAPI
+
+PARSE_I )- PROC
+CAPI --( PROC_I
+PROC --( DB_I
+AUTH_I - AUTH
+CAPI -( AUTH_I
+CAPI --( MUT_I
+MUT --( DB_I
+ADM_I )- ADM_API
+ADM --( DB_I
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+```puml
+@startuml
+title Coeus "User Query" Process View
+autoactivate on
+
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Query Processor" as PROC
+participant "Query Parser" as PARSE
+participant "Mutation Processor" as MUT
+participant "Admin API" as ADM_API
+participant "Client Management System" as ADM
+participant "Deployment Manager" as DEP
+participant "Database" as DB
+
+CAPI -> PROC: Perform Query
+PROC -> PARSE: lexy::parse
+return Query
+PROC -> DB: SELECT
+return Result
+return Result
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+```puml
+@startuml
+title Coeus "Mutation Query" Process View
+autoactivate off
+
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Query Processor" as PROC
+participant "Query Parser" as PARSE
+participant "Mutation Processor" as MUT
+participant "Admin API" as ADM_API
+participant "Client Management System" as ADM
+participant "Deployment Manager" as DEP
+participant "Database" as DB
+
+[-> AUTH ++: Authorise
+return Access Token
+CAPI -> AUTH ++: Validate
+alt Unauthorised
+CAPI <-- AUTH: Failure
+else Authorised
+'activate PROC
+return Success
+CAPI -> MUT ++: Perform Command
+MUT -> DB ++: UPDATE
+return Success
+return Success
+end
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+```puml
+@startuml
+title Coeus "Contract Changes" Process View
+autoactivate on
+
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Query Processor" as PROC
+participant "Query Parser" as PARSE
+participant "Mutation Processor" as MUT
+participant "Admin API" as ADM_API
+participant "Client Management System" as ADM
+participant "Deployment Manager" as DEP
+participant "Database" as DB
+
+ADM_API -> ADM: Add Client\nEdit Client\nRemove Client
+opt
+ADM -> DEP: RunInstances\nTerminateInstances
+return Success
+end
+ADM -> DB: ALTER SCHEMA\nCREATE DATABASE\nDROP DATABASE
+return Success
+return  Success
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+1. What did you decide?
+
+## Authentication Protocol: OAuth 2
+
+2. What was the context for your decision?
+
+We have a need to authenticate users. The API for this must be secure, but
+easy to use and simple to implement. OAuth is an existing protocol designed for
+precisely these criteria. It is also the most popular one out there, meaning
+the programmers of our clients are likely used to it and will find it easy
+to implement the client side or re-use an existing library for that purpose.
+The rest of the project is largely independent of this choice, requiring only
+minor changes in the Client API component and an appropriate implementation
+in the Auth Service component
+
+3. What is the problem you are trying to solve?
+
+How can we allow users to authenticate in an easy but secure manner?
+
+4.  Which alternative options did you consider?
+
+OAuth, Kerberos, own solution
+
+5. Which one did you choose?
+
+OAuth 2
+
+6. What is the main reason for that?
+
+OAuth is a more popular and widely supported protocol than Kerberos.
+Its age and popularity also makes it more robust than a self-designed
+protocol is likely to be.
+
+1. What did you decide?
+
+## Parser: Lexy
+
+2. What was the context for your decision?
+
+Our users send us queries to retrieve data - as a string.
+In order to filter the data for an appropriate response, the string needs to be
+parsed into a format usable by the application. Lexy can be used for that.
+The impact of this choice is mainly in performance.
+
+3. What is the problem you are trying to solve?
+
+How can we turn a query string into an object we can use to process data?
+
+4.  Which alternative options did you consider?
+
+Lexy, custom parser
+
+5. Which one did you choose?
+
+Lexy
+
+6. What is the main reason for that?
+
+Lexy is an open-source, freely-available parser which allows specification of
+grammars in a convenient C++ DSL.
+Using a library instead of building it ourselves saves a lot of work and
+provides a guarantee of performance.
+
+Unfortunately, although performance is guaranteed to not be *bad*, it is also
+otherwise out of our control, meaning if we find it to be insufficient later on,
+we cannot do anything about it.
+
+1. What did you decide?
+
+## Deployment provider: AWS
+
+2. What was the context for your decision?
+
+Given that we decided to run our software ourselves instead of selling it to
+clients as a package, we have the need for hardware to run it. A multitenant
+architecture means we'd also benefit from a scalable solution and that we can
+scale horizontally with little effort.
+
+3. What is the problem you are trying to solve?
+
+Where will we run our software?
+
+4.  Which alternative options did you consider?
+
+AWS, fixed host, self-host
+
+5. Which one did you choose?
+
+AWS
+
+6. What is the main reason for that?
+
+Renting fixed machines from a provider would allow us to run our software at low
+cost, but makes it difficult to scale when we need more capacity to accomodate
+new or growing clients.
+
+Self-hosting can be very expensive and would likely provide weaker guarantees
+on availability and failure recovery than outsourcing.
+
+AWS is rather expensive as hosting goes due to its flexibility, but allows us to
+increase and decrease resources programmatically and quickly in response to
+client needs.
+
+
 
 # Ex - Interface/API Specification
 
