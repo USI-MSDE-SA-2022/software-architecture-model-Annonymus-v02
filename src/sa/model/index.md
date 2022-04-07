@@ -1412,6 +1412,8 @@ openapi to tree feedback:
  - The colors of the get/post/put/delete markers do not provide enough contrast to the
    text, they should be less saturated
  - Occasionally the editor opens an autocomplete tooltip with no content, which it will never close again
+
+   This can be reproduced by opening a new instance in an incognito window (i.e. with the default text filled in), deleting the content of one of the autocompleted fields (e.g. "get") and quickly writing `po`. The app will open an autocomplete tooltip on `p`, but if the `o` comes quickly enough, it will not manage to close it before the options list becomes empty, which seems to freeze it in place
  - The viewer's zoom controls are too sensitive for macos scrolling (which is usually much more fine-grained than other platforms')
 
 # Ex - Connector View
