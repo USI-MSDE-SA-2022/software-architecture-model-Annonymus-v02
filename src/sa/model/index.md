@@ -1101,6 +1101,58 @@ increase and decrease resources programmatically and quickly in response to
 client needs.
 
 
+```puml
+@startuml
+title Middleware with control flow
+'autoactivate on
+
+participant "Frontend" as F2
+participant "Frontend" as F
+participant "Middleware" as M
+participant "Backend" as B
+participant "Backend" as B2
+actor "admin" as ADMIN
+
+create B
+B <- ADMIN
+M o<- B
+F -> M ++
+M --> B ++
+M <-- B --
+F <- M --
+
+create B2
+B2 <- ADMIN
+M o<- B2
+
+F -> M ++
+M --> B ++
+
+F2 -> M ++
+M --> B2 ++
+M <-- B2 --
+F2 <- M --
+M <-- B --
+F <- M --
+
+M -> B
+destroy B
+
+
+F -> M ++
+M --> B2 ++
+M <-- B2 --
+F <- M --
+
+M -> B2
+destroy B2
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
 
 # Ex - Interface/API Specification
 
@@ -1129,6 +1181,238 @@ Good: Define interfaces of all outer-level components. Does your architecture pu
 Exceed: Also, document the Web API using the OpenAPI language. You can use the [OpenAPI-to-Tree](http://api-ace.inf.usi.ch/openapi-to-tree/) tool to visualize the structure of your OpenAPI description.
 
 }
+
+```puml
+@startuml
+skinparam componentStyle rectangle
+
+!include <tupadr3/font-awesome/database>
+!include <tupadr3/font-awesome/undo>
+
+title Coeus Logical View
+interface " " as DB_I
+    note left of DB_I
+    operations:
+    ..
+    execute(SQL)
+    end note
+interface " " as MUT_I
+    note right of MUT_I
+    operations:
+    ..
+    addItem(udd)
+    removeItem(id)
+    getItem(id)
+    setTag(id, tag, value)
+    removeTag(id, tag)
+    end note
+interface " " as ADM_I
+    note top of ADM_I
+    operations:
+    ..
+    addCollection(properties)
+    removeCollection(id)
+    setProperties(id, properties)
+    end note
+interface " " as ADM_API_I
+    note top of ADM_API_I
+    operations:
+    ..
+    /collections POST
+    /collections/{id} DELETE
+    /collections/{id} GET
+    /collections/(id) PUT
+    /users/{name} PUT
+    end note
+interface " " as CAPI_I
+    note top of CAPI_I
+    operations:
+    ..
+    /collections/{id}?q={query} GET
+    /collections/{id} POST
+    /collections/{id}/{iid} GET
+    /collections/{id}/{iid} DELETE
+    /collections/{id}/{iid}/{tag} PUT
+    /collections/{id}/{iid}/{tag} DELETE
+    end note
+[Database <$database{scale=0.33}>] as DB
+component API {
+    [Client API <$undo{scale=0.33}>] as CAPI
+    [Admin API <$undo{scale=0.33}>] as ADM_API
+}
+interface " " as PROC_I
+    note right of PROC_I
+    operations:
+    ..
+    execute(query)
+    end note
+component "Query Engine" {
+    [Query Processor] as PROC
+    interface " " as PARSE_I
+    [Query Parser] as PARSE
+}
+[Auth Service] as AUTH
+[Mutation Processor] as MUT
+[Client Management System] as ADM
+interface " " as AUTH_I
+    note top of AUTH_I
+    operations:
+    ..
+    isValid(token)
+    addUser(name)
+    end note
+
+DB_I -- DB
+PROC_I -- PROC
+PARSE - PARSE_I
+MUT_I -- MUT
+ADM - ADM_I
+ADM_API_I -- ADM_API
+CAPI_I -- CAPI
+
+PARSE_I )- PROC
+CAPI --( PROC_I
+PROC --( DB_I
+AUTH_I - AUTH
+ADM_API -( AUTH_I
+CAPI -( AUTH_I
+CAPI --( MUT_I
+MUT --( DB_I
+ADM_I )- ADM_API
+ADM --( DB_I
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+openapi specification:
+```yaml
+openapi: "3.0.2"
+info:
+  title: Coeus API
+  version: "0.1"
+paths:
+  /adm/collections:
+    post:
+      description: add a new collection
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: NOT AUTHORISED
+  /adm/collections/{id}:
+    put:
+      description: edit a collection
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: NOT AUTHORISED
+    get:
+      description: get a collection
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: NOT AUTHORISED
+        "404":
+          description: NOT FOUND
+    delete:
+      description: delete a  collection
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: NOT AUTHORISED
+        "404":
+          description: NOT FOUND
+  /adm/users/{name}:
+    put:
+      description: add a new user or change their credentials
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: NOT AUTHORISED
+  /collections/{id}:
+    get:
+      description: perform a query
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: the query
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: NOT FOUND
+    post:
+      description: add a new item
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: NOT AUTHORISED
+        "404":
+          description: NOT FOUND
+  /collections/{id}/{iid}
+    get:
+      description: get an item
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: NOT AUTHORISED
+        "404":
+          description: NOT FOUND
+    delete:
+      description: delete an item
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: NOT AUTHORISED
+        "404":
+          description: NOT FOUND
+  /collections/{id}/{iid}/{tag}:
+    put:
+      description: add or edit a tag on an item
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: NOT AUTHORISED
+        "404":
+          description: NOT FOUND
+    delete:
+      description: remove a tag from an item
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: NOT AUTHORISED
+        "404":
+          description: NOT FOUND
+```
+
+Two endpoints missing due to bug in the 'openapi to tree' app:
+![](../images/apiTree.png)
+
+openapi to tree feedback:
+ - It refuses to render the above document unless you comment the `/collections/{id}/{iid}` path
+ - The main advantage of a tree structure is that it allows easy representation of
+   deeply nested structures, but most APIs are very flat and won't be rendered very well by this.
+ - The tool has tooltips, but they do not include any useful information. There should at least
+   be the description and non-path parameters
+ - If the tool is meant to be used by people new to openapi, better error messages would be nice
+ - The colors of the get/post/put/delete markers do not provide enough contrast to the
+   text, they should be less saturated
+ - Occasionally the editor opens an autocomplete tooltip with no content, which it will never close again
+ - The viewer's zoom controls are too sensitive for macos scrolling (which is usually much more fine-grained than other platforms')
 
 # Ex - Connector View
 
