@@ -1435,6 +1435,151 @@ Exceed: introduce a new type of connector and update your existing process view
 
 }
 
+![](./connectors.c5)
+
+Using a new connector QQ (Query Queue) - an N-M connector which allows an arbitrary number of producers and consumers to add tasks to a queue. Producers will create a task and block until it completes. Consumers will pull an available task (which is then markes as "in progress") and, upon completion, produce a result. The result is returned to the producer that created the task, at which point the task is removed from the queue. Tasks that are marked in progress cannot be consumed by another consumer, but upon triggering a timeout, the status is reset (e.g. if the consumer that was working on it crashed). A consumer that attempts to pull a task while the queue
+is empty blocks until one is available.
+
+1. What did you decide?
+
+## API/Query Processor connector: Query Queue
+
+2. What was the context for your decision?
+
+The system is required to process a large volume of queries, each of which is
+expensive to process, with minimal latency.
+Moreover, their availability is critical. If these two components fail, the entire
+system is down as they are part of the core service provided.
+
+The outcome of this decision only affects the architecture of the two components involved.
+
+3. What is the problem you are trying to solve?
+
+How can we connect API and Query processor so as to tolerate very high loads?
+
+4.  Which alternative options did you consider?
+
+Procedure call, tuple space, custom connector
+
+5. Which one did you choose?
+
+Custom connector.
+
+6. What is the main reason for that?
+
+Procedure calls are the most basic connectors, but they are direct 1-1 connectors.
+To increase the maximum load we can handle we require the ability to use
+multiple query engines and at some point perhaps even multiple client APIs
+simultaneously.
+Procedure calls do not provide this capability.
+
+Tuple spaces provide n-m connectivity and the ability to block until data
+is available, but they are not made for synchronous use. A system can be engineered
+to make it work, by having the query processor create a tuple for the response
+and making the API attempt to read that immediately after publishing the
+request tuple, but it is not the intended use of a tuple space and makes it
+difficult to extend the connector with extra features like timeouts.
+
+By creating a custom connector (the query queue) we have made a synchronous,
+indirect n-m connector with specialised features fit for our purposes.
+
+The cost of developing it (in manpower, time and money) is added to the project,
+but will pay off in the long term as using a specialised connector makes development
+of client api and query processor easier and its increased power will enhance
+the quality of the final product (e.g. by allowing to scale to larger loads)
+
+## Process Views
+
+```puml
+@startuml
+title Coeus "User Query" Process View
+
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Query Queue" as QQ
+participant "Query Processor" as PROC
+participant "Query Parser" as PARSE
+participant "Mutation Processor" as MUT
+participant "Admin API" as ADM_API
+participant "Client Management System" as ADM
+participant "Database" as DB
+
+QQ <- PROC: Pull Query
+CAPI -> QQ ++: Push Query
+QQ --> PROC ++: Query
+
+PROC -> PARSE ++: call Parse(Query)
+return Query Details
+PROC -> DB ++: SELECT query
+return Result
+QQ <-- PROC --: Result
+CAPI <-- QQ --: Result
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+```puml
+@startuml
+title Coeus "Mutation Query" Process View
+autoactivate off
+
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Query Queue" as QQ
+participant "Query Processor" as PROC
+participant "Query Parser" as PARSE
+participant "Mutation Processor" as MUT
+participant "Admin API" as ADM_API
+participant "Client Management System" as ADM
+participant "Database" as DB
+
+CAPI -> AUTH ++: call isValid(token)
+alt Unauthorised
+CAPI <-- AUTH: Failure
+else Authorised
+'activate PROC
+return Success
+CAPI -> MUT ++: call addItem(udd)\ncall removeItem(id)\ncall getItem(id)\ncall setTag(id, tag, value)\ncall removeTag(id, tag)
+MUT -> DB ++: UPDATE query
+return Success
+return Success
+end
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+```puml
+@startuml
+title Coeus "Contract Changes" Process View
+autoactivate on
+
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Query Queue" as QQ
+participant "Query Processor" as PROC
+participant "Query Parser" as PARSE
+participant "Mutation Processor" as MUT
+participant "Admin API" as ADM_API
+participant "Client Management System" as ADM
+participant "Database" as DB
+
+ADM_API -> ADM: call addCollection(properties)\ncall removeCollection(id)\ncall setProperties(id, properties)
+ADM -> DB: CREATE query\nDELETE query\nUPDATE query
+return Success
+return Success
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
 # Ex - Adapters and Coupling
 
 {.instructions
