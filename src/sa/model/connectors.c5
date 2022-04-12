@@ -5,7 +5,7 @@ web Admins -> Admin API
 /// Client API -call->
 Auth Service <-call- Admin API
 
-/// TODO: this might be a good candidate for new connector
+/// replace the '->' arrow with '<-' to break the renderer
 Client API -> QQ <- Query Processor
 Client API -call-> Mutation Processor
 
