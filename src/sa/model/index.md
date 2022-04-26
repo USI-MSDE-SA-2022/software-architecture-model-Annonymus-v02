@@ -1663,8 +1663,8 @@ Now a client wants to connect their application which uses the documented REST A
      /collections/{id}/{iid}/{tag} PUT
      /collections/{id}/{iid}/{tag} DELETE
      end note
- component API {
-     [REST Wrapper <$undo{scale=0.33}>] as W
+ component Client API Wrapper {
+     [REST adapter <$undo{scale=0.33}>] as W
      interface " " as CAPI_I
         note right of CAPI_I
         operations:
