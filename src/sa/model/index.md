@@ -1437,7 +1437,7 @@ Exceed: introduce a new type of connector and update your existing process view
 
 ![](./connectors.c5)
 
-Using a new connector QQ (Query Queue) - an N-M connector which allows an arbitrary number of producers and consumers to add tasks to a queue. Producers will create a task and block until it completes. Consumers will pull an available task (which is then markes as "in progress") and, upon completion, produce a result. The result is returned to the producer that created the task, at which point the task is removed from the queue. Tasks that are marked in progress cannot be consumed by another consumer, but upon triggering a timeout, the status is reset (e.g. if the consumer that was working on it crashed). A consumer that attempts to pull a task while the queue
+Using a new connector QQ (Query Queue) - an N-M connector which allows an arbitrary number of producers and consumers to add tasks to a queue. Producers will create a task and block until it completes. Consumers will pull an available task (which is then marked as "in progress") and, upon completion, produce a result. The result is returned to the producer that created the task, at which point the task is removed from the queue. Tasks that are marked in progress cannot be consumed by another consumer, but upon triggering a timeout, the status is reset (e.g. if the consumer that was working on it crashed). A consumer that attempts to pull a task while the queue
 is empty blocks until one is available.
 
 1. What did you decide?
@@ -1616,6 +1616,168 @@ Whenever you have a connector you couple together the components and different c
   Regarding the coupling facets mentioned in question 5. You do not have to answer all questions related to "discovery", "session", "binding", "interaction", "timing", "interface" and "platform" (p.441, Coupling Facets). Just the ones that you think are relevant for your design and by answering them you can get ideas on how to do question 6.
 
 }
+
+1.
+
+There are no adapters in any of my logical views, not even in the bottom-up view since all the existing components talk to my components, never to each other, so my components can be built to accomodate their interface instead of creating a new one.
+
+So I had to invent some:
+- Imagine the Client API did not offer a REST API but a proprietary solution which offers the following operations (yes I know that's a terrible API. Maybe that's why the adapter is necessary):
+    - setActiveCollection(id)
+    - [result_ids] query(query)
+    - item addItem(id, [tags])
+    - item getItem(id)
+    - removeItem(item)
+    - [tags] getTags(item)
+    - setTags(item, tags)
+
+For simplicity we ignore authentication - assume that is either omitted or done before using an undocumented part of the API.
+Now a client wants to connect their application which uses the documented REST API with Coeus. An adapter is necessary.
+- The mutation processor is meant to be a bit beefier than that, but we can pretend for the duration of this exercise that it is nothing more than an adapter which translates its operations into sequel queries to run on the database
+
+ 2.
+
+ The Client API adapter solves a mismatch between the connector *type* of Client API and the Client as well as a mismatch in the allowed *operations*: the operations of the REST API cannot be mapped directly to those of the proprietary API.
+
+ The Mutation processor also solves a mismatch between connector types, but in its case the operations can be mapped directly (for the purpose of this exercise I'm assuming the schema of the database follows the structure of the application)
+
+ 3.
+
+ The mutation processor cannot be hidden inside a wrapper as other components do access the database directly, without going through it, but the client API can be wrapped easily:
+
+ ```puml
+ @startuml
+ skinparam componentStyle rectangle
+
+ !include <tupadr3/font-awesome/undo>
+
+ title Coeus Client API Wrapper
+ interface " " as W_I
+     note top of W_I
+     operations:
+     ..
+     /collections/{id}?q={query} GET
+     /collections/{id} POST
+     /collections/{id}/{iid} GET
+     /collections/{id}/{iid} DELETE
+     /collections/{id}/{iid}/{tag} PUT
+     /collections/{id}/{iid}/{tag} DELETE
+     end note
+ component API {
+     [REST Wrapper <$undo{scale=0.33}>] as W
+     interface " " as CAPI_I
+        note right of CAPI_I
+        operations:
+        ..
+        setActiveCollection(id)
+        [result_ids] query(query)
+        item addItem(id, [tags])
+        item getItem(id)
+        removeItem(item)
+        [tags] getTags(item)
+        setTags(item, tags)
+        end note
+     [Client API] as CAPI
+ }
+
+ W_I -- W
+ W --( CAPI_I
+ CAPI_I -- CAPI
+
+ skinparam monochrome true
+ skinparam shadowing false
+ skinparam defaultFontName Courier
+ @enduml
+ ```
+
+ 4.
+
+ The SQL database uses a standard interface following the well-known SQL language,
+ although caution must be taken since not all databases follow the standard strictly, and most also add non-standard components on top of it.
+
+ Further, the REST APIs, though not themselves a standard make use of other standards (JSON, HTTP...)
+
+ 5.
+
+ I will use the connection made through the query queue from the previous exercise as I think it'll make for an interesting and somewhat unusual example.
+
+- Discovery is automatic - the client API simply submits a request without caring who fulfils it. Similarly, the query processor retrieves a request without knowing who it cames from - it is the query queue that decides which instances of the two components are put together.
+- The query queue is stateful - although every message from the Client API is independent of the previous messages, the messages from the query processor depend both on the previous messages from the CAPI *and* on the previous messages from the processors.
+- The binding is early - the components are hardcoded to depend on each other.
+- Interaction is indirect - CAPI and processor never talk to each other directly, only passing messages through the queue.
+- Timing, unlike in a regular message queue, is synchronous. The CAPI cannot resume until its request has been fulfilled by an instance of the query processor.
+- Both components depend on the Query Queue. If its API-side interface changes, so must the client API. Same for the processor's side. Schema changes most likely involve both sides and require changes in all components. Client API and Query Processor, however, are free to change in any way without affecting the other components as they are not depended on by either the QQ or each other.
+- The separation by the query queue allows CAPI and processor to be implemented separately and run on different machines. Even, in fact, multiple instances of the same component can run in parallel using different platforms. The query queue itself must, of course remain standardised. I hadn't thought about the exact method in messages are sent to the QQ when I invented it, but I would envision it as GRPC call or a protobuf message, which means that even if the QQ is deployed on a different platform, the other components are not affected.
+
+6.
+
+Client API - REST adapter:
+```cpp
+id_t[] get_collections(id, query) {
+    setActiveCollection(id);
+    return query(query);
+}
+id_t post_collections(id) {
+    setActiveCollection(id);
+    id_t item_id = createNewItemId();
+    addItem(item_id, {});
+    return item_id;
+}
+tuple<item_t, tag_t[]> get_collections(id, iid) {
+    item_t item = getItem(iid);
+    tag_t[] tags = getTags(item);
+    return {item, tags};
+}
+void delete_collections(id, iid) {
+    item_t item = getItem(iid);
+    removeItem(item);
+}
+void put_collections(id, iid, tag) {
+    item_t item = getItem(iid);
+    tag_t[] tags = getTags(item);
+    tags = tags.append(tag);
+    setTags(item, tags);
+}
+void delete_collections(id, iid, tag) {
+    item_t item = getItem(iid);
+    tag_t[] tags = getTags(item);
+    tags = tags.remove(tag);
+    setTags(item, tags);
+}
+```
+
+Mutation processor adapter:
+```sql
+addItem(udd)
+->
+INSERT INTO items VALUES (udf_new_id(), udd.field1, udd.field2, ...)
+
+removeItem(id)
+->
+DELETE FROM items WHERE item_id = id
+
+getItem(id)
+->
+SELECT * FROM items, (
+    SELECT item_id, GROUP_CONCAT(tag_name + ': ' + tag_value) FROM tags WHERE item_id = id
+    GROUP BY item_id
+) AS tags WHERE item.item_id = id AND item.item_id = tags.item_id
+
+setTag(id, tag, value)
+->
+INSERT INTO tags VALUES (id, tag, value)
+
+removeTag(id, tag)
+->
+DELETE FROM tags WHERE item_id = id AND tag_name = tag
+```
+
+7.
+
+I believe I have already minimised coupling among my components. The query queue does it for the most important two, but the others are also in a minimally-coupled state. No components share state and messages are independent from each other wherever reasonable (obviously not in the database). Binding and discovery among components is static, which I believe is reasonable as any components that are bound together are meant to run on the same machine as single instances. The auth service perhaps could be external, although I believe it still makes sense for that to be an RPC, perhaps using grpc, with a destination address in a configuration file. Anything more loose is a security vulnerability.
+Timing is synchronous in most cases with direct interactions, but that is necessitated by the performance constraints. It makes no sense to perform an operation to e.g. add a tag when there's nobody to execute it yet - the user is expecting feedback *now*.
+The interfaces are all internal so if it is necessary to change one, the other side can be adapted as well (except for the REST APIs, but there's not really a way around it - if the interface changes the clients will have to as well. Hence why interfaces usually don't change. The APIs can easily be extended to support new or changed operations without breaking the previous one though).
+Finally, the platform is, by necessity, fixed to be the same for all components. This is again a matter of performance. Due to the need for low-latency responses, we decided to implement everything in cpp running on the same machine. In order to accomodate higher throughput, an exception was made for the CAPI and the query processor, but these are still required to be running in very similar environments physically located close together to minimise performance loss.
 
 # Ex - Physical and Deployment Views
 
