@@ -1622,19 +1622,25 @@ Whenever you have a connector you couple together the components and different c
 There are no adapters in any of my logical views, not even in the bottom-up view since all the existing components talk to my components, never to each other, so my components can be built to accomodate their interface instead of creating a new one.
 
 So I had to invent some:
-- Imagine the Client API did not offer a REST API but a proprietary solution which offers the following operations (yes I know that's a terrible API. Maybe that's why the adapter is necessary):
-    - setActiveCollection(id)
-    - [result_ids] query(query)
-    - item addItem(id, [tags])
-    - item getItem(id)
-    - removeItem(item)
-    - [tags] getTags(item)
-    - setTags(item, tags)
+<ul>
+<li>
+Imagine the Client API did not offer a REST API but a proprietary solution which offers the following operations (yes I know that's a terrible API. Maybe that's why the adapter is necessary):
+
+ - setActiveCollection(id)
+ - [result_ids] query(query)
+ - item addItem(id, [tags])
+ - item getItem(id)
+ - removeItem(item)
+ - [tags] getTags(item)
+ - setTags(item, tags)
 
 For simplicity we ignore authentication - assume that is either omitted or done before using an undocumented part of the API.
 Now a client wants to connect their application which uses the documented REST API with Coeus. An adapter is necessary.
-- The mutation processor is meant to be a bit beefier than that, but we can pretend for the duration of this exercise that it is nothing more than an adapter which translates its operations into sequel queries to run on the database
-
+</li>
+<li>
+The mutation processor is meant to be a bit beefier than that, but we can pretend for the duration of this exercise that it is nothing more than an adapter which translates its operations into sequel queries to run on the database
+</li>
+</ul>
  2.
 
  The Client API adapter solves a mismatch between the connector *type* of Client API and the Client as well as a mismatch in the allowed *operations*: the operations of the REST API cannot be mapped directly to those of the proprietary API.
@@ -1663,7 +1669,7 @@ Now a client wants to connect their application which uses the documented REST A
      /collections/{id}/{iid}/{tag} PUT
      /collections/{id}/{iid}/{tag} DELETE
      end note
- component Client API Wrapper {
+ component "Client API Wrapper" {
      [REST adapter <$undo{scale=0.33}>] as W
      interface " " as CAPI_I
         note right of CAPI_I
@@ -1778,6 +1784,7 @@ I believe I have already minimised coupling among my components. The query queue
 Timing is synchronous in most cases with direct interactions, but that is necessitated by the performance constraints. It makes no sense to perform an operation to e.g. add a tag when there's nobody to execute it yet - the user is expecting feedback *now*.
 The interfaces are all internal so if it is necessary to change one, the other side can be adapted as well (except for the REST APIs, but there's not really a way around it - if the interface changes the clients will have to as well. Hence why interfaces usually don't change. The APIs can easily be extended to support new or changed operations without breaking the previous one though).
 Finally, the platform is, by necessity, fixed to be the same for all components. This is again a matter of performance. Due to the need for low-latency responses, we decided to implement everything in cpp running on the same machine. In order to accomodate higher throughput, an exception was made for the CAPI and the query processor, but these are still required to be running in very similar environments physically located close together to minimise performance loss.
+
 
 # Ex - Physical and Deployment Views
 
