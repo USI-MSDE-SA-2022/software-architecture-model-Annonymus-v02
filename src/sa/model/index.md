@@ -1400,7 +1400,7 @@ paths:
 ```
 
 Two endpoints missing due to bug in the 'openapi to tree' app:
-![](../images/apiTree.png)
+![](apiTree.png)
 
 openapi to tree feedback:
  - It refuses to render the above document unless you comment the `/collections/{id}/{iid}` path
