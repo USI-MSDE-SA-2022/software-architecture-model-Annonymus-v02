@@ -1815,6 +1815,130 @@ Exceed: 1 physical view, 1 deployment view, 1 ADR (b.) + 1 demo (c.)
 
 }
 
+Container view:
+```puml
+@startuml
+!include <C4/C4_Container>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+Person(user_r, "Read-only user", "")
+Person(user_w, "Privileged user", "")
+Person(user_a, "Sysadmin", "")
+
+System_Boundary(boundary, "Coeus") {
+    System(db, "DBMS")
+    System(api, "API")
+    System(adm_api, "Management API")
+    System(proc, "Processor")
+    System(auth, "Authentication Service")
+}
+
+System_Ext(web, "Client website")
+
+Rel(user_r, web, "Perform Queries")
+Rel(user_w, api, "Add/remove/edit tags and items")
+Rel(user_a, adm_api, "Manage permissions and databases")
+Rel(proc, db, "Retrieve", "raw data")
+Rel(web, api, "Translate or forward", "query")
+Rel(api, proc, "Execute", "query")
+Rel(adm_api, db, "Perform structural changes")
+Rel(api, db, "Store and update", "raw data")
+Rel(api, auth, "Authenticate")
+@enduml
+```
+
+Deployment view:
+
+I repurposed the C4 notation since I could not find a puml library more
+appropriate for deployment views
+```puml
+@startuml
+!include <C4/C4_Container>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+
+Boundary(front, "API server") {
+    System(api, "API")
+    System(adm_api, "Management API")
+    System(auth, "Authentication Service")
+}
+
+Boundary(mid, "Processor servers") {
+    System(proc, "Processor")
+}
+
+Boundary(back, "DB server") {
+    System(db, "DBMS")
+}
+
+Rel(adm_api, db, "TCP/IP")
+Rel(proc, db, "TCP/IP")
+Rel(api, proc, "RPC")
+Rel(api, auth, "HTTPS")
+@enduml
+```
+
+1. What did you decide?
+
+## Deployment Strategy: Shadow
+
+2. What was the context for your decision?
+
+There are many deployment strategies each with different pros and cons.
+Our project is only planned to be deployed on a single instance, but requires
+constant availability. This choice will impact the quality of service for our
+clients as well as the cost of maintaining the system post-launch.
+
+3. What is the problem you are trying to solve?
+
+How can we deploy our system while maximising availability and minimising risk?
+
+4.  Which alternative options did you consider?
+
+big bang, blue/green, shadow, pilot, gradual phase-in, canary, A/B testing
+
+5. Which one did you choose?
+
+Shadow
+
+6. What is the main reason for that?
+
+Our system only has a backend - a single instance. That means strategies like
+gradual phase-in which split the user base over multiple instances make no sense.
+Although the system could be duplicated to allow A/B testing over all components
+except the database, the usefulness of doing so is very limited considering the
+nature of the project (e.g. no user interface). For similar reasons, canary and
+pilot are not a good choice.
+
+Big bang, although low-cost, is high-risk as it makes it impossible to revert
+changes which break the system. Blue/green solves that problem, but so does shadow
+and it has the additional benefit of allowing us to test the new system without
+exposing our users to it, so if something breaks we do not lose availability or
+data even temporarily. On the other hand, it is a very expensive option,
+requiring us to run multiple copies of the whole system, comparing results of the
+deployed system with the shadow system, duplicating the db on every release etc.
+
+For this reason we have decided, depending on resource availability, to
+allow use of a more limited shadow system - for example running only one or a few
+collections on it or using it only for read operations, eliminating the need to
+duplicate the database. This decision will be made on a case-by-case basis on
+every release.
+
+Another option that we do not plan to implement immediately but are keeping in
+mind for future expansion is a sort of canary deployment:
+Although the main system will keep its shadow strategy, developers using our
+service will appreciate the availability of a sandbox in which they can
+experiment with the API and features of our system without needing to use (and buy)
+a collection on the main system. If/when we implement such a sandbox, upon developing
+new features we will first deploy them in the sandbox. This will allow us to
+observe the system in use and fix any bugs we encounter, as well as gather data
+on how the new features are being used, which may inform decisions on how
+to tweak the features before they are fully released, at which point they become
+immutable as we must retain backwards compatibility on the main system.
+
+
 # Ex - Availability and Services
 
 {.instructions
