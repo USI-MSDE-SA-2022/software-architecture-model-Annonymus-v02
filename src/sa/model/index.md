@@ -1827,11 +1827,11 @@ Person(user_w, "Privileged user", "")
 Person(user_a, "Sysadmin", "")
 
 System_Boundary(boundary, "Coeus") {
-    System(db, "DBMS")
-    System(api, "API")
-    System(adm_api, "Management API")
-    System(proc, "Processor")
-    System(auth, "Authentication Service")
+    ContainerDb(db, "Database", "MySQL")
+    Container(api, "API", "C++")
+    Container(adm_api, "Management API", "C++")
+    Container(proc, "Processor", "C++")
+    Container(auth, "Authentication Service", "C++")
 }
 
 System_Ext(web, "Client website")
@@ -1860,17 +1860,17 @@ appropriate for deployment views
 
 
 Boundary(front, "API server") {
-    System(api, "API")
-    System(adm_api, "Management API")
-    System(auth, "Authentication Service")
+    Container(api, "API", "")
+    Container(adm_api, "Management API", "")
+    Container(auth, "Authentication Service", "")
 }
 
 Boundary(mid, "Processor servers") {
-    System(proc, "Processor")
+    Container(proc, "Processor", "")
 }
 
 Boundary(back, "DB server") {
-    System(db, "DBMS")
+    Container(db, "DBMS", "")
 }
 
 Rel(adm_api, db, "TCP/IP")
