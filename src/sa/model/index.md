@@ -1828,10 +1828,21 @@ Person(user_a, "Sysadmin", "")
 
 System_Boundary(boundary, "Coeus") {
     ContainerDb(db, "Database", "MySQL")
-    Container(api, "API", "C++")
-    Container(adm_api, "Management API", "C++")
-    Container(proc, "Processor", "C++")
-    Container(auth, "Authentication Service", "C++")
+    Container(api, "API", "Docker") {
+        Component(capi, "Client API", "C++")
+        Component(mut, "Mutation Processor", "C++")
+    }
+    Container(adm_api, "Management API", "Docker") {
+        Component(admapi, "Admin API", "C++")
+        Component(cms, "Client Management System", "C++")
+    }
+    Container(proc, "Processor", "Docker") {
+        Component(procc, "Query Processor", "C++")
+        Component(pars, "Query Parser", "C++")
+    }
+    Container(auth, "Authentication Service", "Docker") {
+        Component(authc, "Auth Server", "C++")
+    }
 }
 
 System_Ext(web, "Client website")
