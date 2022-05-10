@@ -1973,6 +1973,254 @@ Exceed: 1, 2, 3, 4, 5, 6, 7, 8
 
 }
 
+1. Already the case
+2. One possibility is load-based pricing: offer plans which allow our clients to
+perform a fixed number of queries per unit of payment. E.g. 1000 queries/CHF.
+3. Our service is paid for by multiple large companies, therefore we have very high
+availability requirements. The damage caused by an unplanned outage is significant.
+There should not be any planned outages longer than a few seconds, since our service
+is central to our client's services. Response times must not exceed 100ms on average
+(we should plan for an expected response time < 40ms*). In exceptional circumstances
+response times of up to 1s may be acceptable.
+4.
+
+```puml
+@startuml
+skinparam componentStyle rectangle
+
+!include <tupadr3/font-awesome/database>
+!include <tupadr3/font-awesome/undo>
+
+title Coeus Logical View
+interface " " as DB_I
+interface " " as MUT_I
+interface " " as ADM_I
+interface " " as ADM_API_I
+interface " " as CAPI_I
+[Database <$database{scale=0.33}>] as DB
+component API {
+    [Client API <$undo{scale=0.33}>] as CAPI
+    [Admin API <$undo{scale=0.33}>] as ADM_API
+}
+interface " " as PROC_I
+component "Query Engine" {
+    [Query Processor] as PROC
+    interface " " as PARSE_I
+    [Query Parser] as PARSE
+}
+[Auth Service] as AUTH
+[Mutation Processor] as MUT
+[Client Management System] as ADM
+interface " " as AUTH_I
+
+[Watchdog] as WD
+
+DB_I -- DB
+PROC_I -- PROC
+PARSE - PARSE_I
+MUT_I -- MUT
+ADM - ADM_I
+ADM_API_I -- ADM_API
+CAPI_I -- CAPI
+
+PARSE_I )- PROC
+CAPI --( PROC_I
+PROC --( DB_I
+AUTH_I - AUTH
+ADM_API -( AUTH_I
+CAPI -( AUTH_I
+CAPI --( MUT_I
+MUT --( DB_I
+ADM_I )- ADM_API
+ADM --( DB_I
+
+WD --( ADM_API_I
+WD --( CAPI_I
+WD --( DB_I
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+1. What did you decide?
+
+## Availability Monitor: Watchdog
+
+2. What was the context for your decision?
+
+We need to guarantee availability of our service.
+Some of our components are not developed directly by us and cannot be extended
+to provide heartbeat monitors.
+
+3. What is the problem you are trying to solve?
+
+How can we effectively monitor availability of our service?
+
+4.  Which alternative options did you consider?
+
+Watchdog, Heartbeat
+
+5. Which one did you choose?
+
+Watchdog
+
+6. What is the main reason for that?
+
+The database and possibly the auth service are not under our control and cannot be
+extended with a heartbeat signal. As such we chose to use a watchdog instead.
+We can effectively test all components by implementing two new processing paths
+in our components which perform dummy actions on their dependencies recursively
+to check availability. Then the watchdog needs only ping the admin API and client API
+components to obtain availability of all components. The downside of this approach
+is that we cannot distinguish whether deeper components (e.g. query parser)
+have failed if shallower components (e.g. Client API) have failed, but we consider
+that to be acceptable since there it makes no difference whether the processor is
+still working if the Client API is gone - either way our service is down.
+The watchdog additionally watches the database due to its importance as a
+critical component and to reduce the delay in the ping response while it
+propagates through the components.
+
+5.
+
+```puml
+@startuml
+title Coeus "Contract Changes" Process View
+
+participant "Watchdog" as WD
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Query Queue" as QQ
+participant "Query Processor" as PROC
+participant "Query Parser" as PARSE
+participant "Mutation Processor" as MUT
+participant "Admin API" as ADM_API
+participant "Client Management System" as ADM
+participant "Database" as DB
+
+WD -> CAPI+: ping
+CAPI -> PROC!!: ping
+...some time later...
+CAPI -> CAPI: timeout
+WD <-- CAPI-: failure
+[<- WD: report failure
+WD -> PROC **: reboot or reinstantiate
+
+
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+6.
+
+
+1. What did you decide?
+
+## Database Replication: Consistency and availability at the cost of partition tolerance
+
+2. What was the context for your decision?
+
+The database is a central component of our system. Losing it temporarily is
+a very expensive outage. Losing any data in it permanently is catastrophic.
+It is of the utmost importance that the database is replicated to provide
+redundancy. Our model is such that read queries are much more frequent and important
+to fulfil than write queries.
+
+3. What is the problem you are trying to solve?
+
+How can we replicate our database while maximising availability and minimising
+inconsistency.
+
+4.  Which alternative options did you consider?
+
+No replication, journal only, lockstep replication, asynchronous replication
+
+5. Which one did you choose?
+
+lockstep replication
+
+6. What is the main reason for that?
+
+We decided to replicate our database such that all write queries, which are rare,
+shall synchronise the other databases before they commit.
+If one replica crashes, the others are fully up-to-date and can continue serving requests
+while the crashed one reboots. Once it is online again it can catch up using the journal
+produced by the working databases. This allows continued availability without compromising
+consistency at the cost of slightly increased processing delay.
+It also allows the more important query type, read-only queries, to proceed
+in all eventualities as long as at least one replica is still online.
+
+To judge which replicas are offline they rely on the Watchdog. Databases which
+cannot contact all replicas check with the watchdog. If the watchdog's alive list
+does not match the database's contact list, a ping is triggered and the operation
+continues only if the results match. If a database cannot contact either the other replicas
+or the watchdog, it considers itself crashed, logs the event and reboots.
+
+In the extremely unlikely event that a replica is working and able to contact the
+watchdog but unable to be contacted by the other replicas, the system grounds to a halt,
+as tha databases fail to establish consensus.
+In the only slightly more likely event that the watchdog is down and cannot be
+restarted, *and* a partition occurs among the replicas such that they cannot all
+contact each other, a similar situation occurs. In the former case the watchdog
+can notice the inconsistency and kill all but the largest partition. In the latter case
+human intervention is required. As a way to mitigate, but not solve, this problem,
+we can designate one database as the primary. When the watchdog is unavailable,
+all databases except the primary will slave themselves to the primary.
+Databases which cannot contact the primary refuse connections and kill themselves.
+Databases which can contact the primary only commit transactions acknowledged by the primary.
+Of course, if both the watchdog and the primary are down, the system still
+becomes unavailable (at least to write queries).
+
+Given the failure scenarios described above, we chose this model as it maintains
+both availability and consistency in most of the cases. Consistency in particular
+is never compromised. Availability could still be increased a little, but only
+at the cost of consistency, which we do not consider an acceptable trade-off.
+
+Event sourcing (i.e. journaling) in this context is used to allow recovering
+replicas to catch up and become consistent again.
+It could also be used as a secondary synchronisation method in the event that
+a database is unable to contact a replica but has access to the file system
+in which the journal is stored, but that is a rather unlikely event.
+It is of further use as an additional backup method to protect against data loss,
+particularly in the event not of a failure of storage medium but corruption,
+possibly due to an intrusion, but that is beyond the scope of this ADR.
+
+7. Our components are strongly dependent on each other. If one fails, in most cases,
+the entire system is down. That said, there are a few partially independent service paths:
+If the mutation processor fails, read queries can still proceed and vice-versa.
+Similarly, if the client API fails, the admin API remains available.
+The other way around too, in theory, although for security reasons that might
+be explicitly disallowed. If the database(s) fail(s), the entire service is down
+as everything depends on it. This means care must be taken that failures do not
+propagate from one component to another, particularly the database and client API.
+That said, there is no reason why they should. The database and client API are
+run in different containers, and most likely machines, from each other and the
+query processor(s) and they communicate over the network using a high-level
+protocol, so even if one component hogs all the resources of a machine and sends
+out poisoned messages, the other components should not be affected.
+Of course the exception to this is if the messages are specifically crafted
+to exploit a vulnerability in the targeted component and in the connector between them
+(SQL interface if targeting the DB, QQ if targeting the CAPI), but that is unavoidable.
+
+8. The only external dependency we might have is the auth service (we're still
+leaving all roads open, so could either create it ourselves, host a component
+bought elsewhere or rent it as a service). If it's down, we can't authenticate
+our users, which means mutation queries, which must be authenticated, cannot complete.
+Read-only queries, however, in most cases do not require authentication, so the
+most important part of our service remains unaffected. For the othe queries there
+really isn't much we can do. One small mitigation is that we can keep a cache
+or recently-used and validated credentials so at least users who were active
+shortly before the auth server went down can still access our service.
+
+
+\* This figure is based on the requirement that network delay should be the dominant
+factor in our response time. The US Network Delay Service Level Standard specifies that
+as a 36ms roundtrip, so we want to add at most that much processing delay.
+
 # Ex - Scalability
 
 {.instructions
