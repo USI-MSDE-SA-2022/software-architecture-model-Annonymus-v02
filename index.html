@@ -1006,7 +1006,162 @@ immutable as we must retain backwards compatibility on the main system.</p>
 <li>How do you plan to avoid cascading failures? Be ready to discuss how the connectors (modeled in your connector view) impact the reliability of your architecture.</li>
 <li>How did you mitigate the impact of your external dependencies being not available? (if applicable)</li>
 </ol>
-<section class="pass"><span>&starf;&star;&star;: </span>1, 3, 4, one of:  5, 6, 7, 8</section><section class="ok"><span>&starf;&starf;&star;: </span>1, 2, 3, 4, two of:  5, 6, 7, 8</section><section class="exceed"><span>&starf;&starf;&starf;: </span>1, 2, 3, 4, 5, 6, 7, 8</section></section><h1 id="ex---scalability"><span class='task'>14.</span>  Scalability</h1>
+<section class="pass"><span>&starf;&star;&star;: </span>1, 3, 4, one of:  5, 6, 7, 8</section><section class="ok"><span>&starf;&starf;&star;: </span>1, 2, 3, 4, two of:  5, 6, 7, 8</section><section class="exceed"><span>&starf;&starf;&starf;: </span>1, 2, 3, 4, 5, 6, 7, 8</section></section><ol>
+<li>Already the case</li>
+<li>One possibility is load-based pricing: offer plans which allow our clients to
+perform a fixed number of queries per unit of payment. E.g. 1000 queries/CHF.</li>
+<li>Our service is paid for by multiple large companies, therefore we have very high
+availability requirements. The damage caused by an unplanned outage is significant.
+There should not be any planned outages longer than a few seconds, since our service
+is central to our client&#39;s services. Response times must not exceed 100ms on average
+(we should plan for an expected response time &lt; 40ms*). In exceptional circumstances
+response times of up to 1s may be acceptable.</li>
+<li></li>
+</ol>
+<img src="./puml_e29.svg"><ol>
+<li>What did you decide?</li>
+</ol>
+<h2 id="availability-monitor-watchdog">Availability Monitor: Watchdog</h2>
+<ol start="2">
+<li>What was the context for your decision?</li>
+</ol>
+<p>We need to guarantee availability of our service.
+Some of our components are not developed directly by us and cannot be extended
+to provide heartbeat monitors.</p>
+<ol start="3">
+<li>What is the problem you are trying to solve?</li>
+</ol>
+<p>How can we effectively monitor availability of our service?</p>
+<ol start="4">
+<li>Which alternative options did you consider?</li>
+</ol>
+<p>Watchdog, Heartbeat</p>
+<ol start="5">
+<li>Which one did you choose?</li>
+</ol>
+<p>Watchdog</p>
+<ol start="6">
+<li>What is the main reason for that?</li>
+</ol>
+<p>The database and possibly the auth service are not under our control and cannot be
+extended with a heartbeat signal. As such we chose to use a watchdog instead.
+We can effectively test all components by implementing two new processing paths
+in our components which perform dummy actions on their dependencies recursively
+to check availability. Then the watchdog needs only ping the admin API and client API
+components to obtain availability of all components. The downside of this approach
+is that we cannot distinguish whether deeper components (e.g. query parser)
+have failed if shallower components (e.g. Client API) have failed, but we consider
+that to be acceptable since there it makes no difference whether the processor is
+still working if the Client API is gone - either way our service is down.
+The watchdog additionally watches the database due to its importance as a
+critical component and to reduce the delay in the ping response while it
+propagates through the components.</p>
+<ol start="5">
+<li></li>
+</ol>
+<img src="./puml_e30.svg"><ol start="6">
+<li></li>
+</ol>
+<ol>
+<li>What did you decide?</li>
+</ol>
+<h2 id="database-replication-consistency-and-availability-at-the-cost-of-partition-tolerance">Database Replication: Consistency and availability at the cost of partition tolerance</h2>
+<ol start="2">
+<li>What was the context for your decision?</li>
+</ol>
+<p>The database is a central component of our system. Losing it temporarily is
+a very expensive outage. Losing any data in it permanently is catastrophic.
+It is of the utmost importance that the database is replicated to provide
+redundancy. Our model is such that read queries are much more frequent and important
+to fulfil than write queries.</p>
+<ol start="3">
+<li>What is the problem you are trying to solve?</li>
+</ol>
+<p>How can we replicate our database while maximising availability and minimising
+inconsistency.</p>
+<ol start="4">
+<li>Which alternative options did you consider?</li>
+</ol>
+<p>No replication, journal only, lockstep replication, asynchronous replication</p>
+<ol start="5">
+<li>Which one did you choose?</li>
+</ol>
+<p>lockstep replication</p>
+<ol start="6">
+<li>What is the main reason for that?</li>
+</ol>
+<p>We decided to replicate our database such that all write queries, which are rare,
+shall synchronise the other databases before they commit.
+If one replica crashes, the others are fully up-to-date and can continue serving requests
+while the crashed one reboots. Once it is online again it can catch up using the journal
+produced by the working databases. This allows continued availability without compromising
+consistency at the cost of slightly increased processing delay.
+It also allows the more important query type, read-only queries, to proceed
+in all eventualities as long as at least one replica is still online.</p>
+<p>To judge which replicas are offline they rely on the Watchdog. Databases which
+cannot contact all replicas check with the watchdog. If the watchdog&#39;s alive list
+does not match the database&#39;s contact list, a ping is triggered and the operation
+continues only if the results match. If a database cannot contact either the other replicas
+or the watchdog, it considers itself crashed, logs the event and reboots.</p>
+<p>In the extremely unlikely event that a replica is working and able to contact the
+watchdog but unable to be contacted by the other replicas, the system grounds to a halt,
+as tha databases fail to establish consensus.
+In the only slightly more likely event that the watchdog is down and cannot be
+restarted, <em>and</em> a partition occurs among the replicas such that they cannot all
+contact each other, a similar situation occurs. In the former case the watchdog
+can notice the inconsistency and kill all but the largest partition. In the latter case
+human intervention is required. As a way to mitigate, but not solve, this problem,
+we can designate one database as the primary. When the watchdog is unavailable,
+all databases except the primary will slave themselves to the primary.
+Databases which cannot contact the primary refuse connections and kill themselves.
+Databases which can contact the primary only commit transactions acknowledged by the primary.
+Of course, if both the watchdog and the primary are down, the system still
+becomes unavailable (at least to write queries).</p>
+<p>Given the failure scenarios described above, we chose this model as it maintains
+both availability and consistency in most of the cases. Consistency in particular
+is never compromised. Availability could still be increased a little, but only
+at the cost of consistency, which we do not consider an acceptable trade-off.</p>
+<p>Event sourcing (i.e. journaling) in this context is used to allow recovering
+replicas to catch up and become consistent again.
+It could also be used as a secondary synchronisation method in the event that
+a database is unable to contact a replica but has access to the file system
+in which the journal is stored, but that is a rather unlikely event.
+It is of further use as an additional backup method to protect against data loss,
+particularly in the event not of a failure of storage medium but corruption,
+possibly due to an intrusion, but that is beyond the scope of this ADR.</p>
+<ol start="7">
+<li><p>Our components are strongly dependent on each other. If one fails, in most cases,
+the entire system is down. That said, there are a few partially independent service paths:
+If the mutation processor fails, read queries can still proceed and vice-versa.
+Similarly, if the client API fails, the admin API remains available.
+The other way around too, in theory, although for security reasons that might
+be explicitly disallowed. If the database(s) fail(s), the entire service is down
+as everything depends on it. This means care must be taken that failures do not
+propagate from one component to another, particularly the database and client API.
+That said, there is no reason why they should. The database and client API are
+run in different containers, and most likely machines, from each other and the
+query processor(s) and they communicate over the network using a high-level
+protocol, so even if one component hogs all the resources of a machine and sends
+out poisoned messages, the other components should not be affected.
+Of course the exception to this is if the messages are specifically crafted
+to exploit a vulnerability in the targeted component and in the connector between them
+(SQL interface if targeting the DB, QQ if targeting the CAPI), but that is unavoidable.</p>
+</li>
+<li><p>The only external dependency we might have is the auth service (we&#39;re still
+leaving all roads open, so could either create it ourselves, host a component
+bought elsewhere or rent it as a service). If it&#39;s down, we can&#39;t authenticate
+our users, which means mutation queries, which must be authenticated, cannot complete.
+Read-only queries, however, in most cases do not require authentication, so the
+most important part of our service remains unaffected. For the othe queries there
+really isn&#39;t much we can do. One small mitigation is that we can keep a cache
+or recently-used and validated credentials so at least users who were active
+shortly before the auth server went down can still access our service.</p>
+</li>
+</ol>
+<p>* This figure is based on the requirement that network delay should be the dominant
+factor in our response time. The US Network Delay Service Level Standard specifies that
+as a 36ms roundtrip, so we want to add at most that much processing delay.</p>
+<h1 id="ex---scalability"><span class='task'>14.</span>  Scalability</h1>
 <section class="instructions"><p>Now that your architecture delivers your software as a service, let&#39;s redesign it so that it can scale!</p>
 <ol>
 <li><p>Pick one scalability dimension: number of clients, size of input, size of state, number of dependencies</p>
