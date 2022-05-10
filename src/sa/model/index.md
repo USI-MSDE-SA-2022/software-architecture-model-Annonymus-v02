@@ -1982,6 +1982,9 @@ There should not be any planned outages longer than a few seconds, since our ser
 is central to our client's services. Response times must not exceed 100ms on average
 (we should plan for an expected response time < 40ms*). In exceptional circumstances
 response times of up to 1s may be acceptable.
+```
+Is it possible to notify users of planned maintenance? If your service goes down also your customers are not able to serve their content to their users?
+```
 4.
 
 ```puml
@@ -2081,7 +2084,9 @@ still working if the Client API is gone - either way our service is down.
 The watchdog additionally watches the database due to its importance as a
 critical component and to reduce the delay in the ping response while it
 propagates through the components.
-
+```
+Connecting the watchdog with deeper components can help to detect which component had a failure and increase the recovery time. 
+```
 5.
 
 ```puml
