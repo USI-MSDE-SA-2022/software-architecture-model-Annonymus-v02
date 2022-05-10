@@ -1015,7 +1015,9 @@ availability requirements. The damage caused by an unplanned outage is significa
 There should not be any planned outages longer than a few seconds, since our service
 is central to our client&#39;s services. Response times must not exceed 100ms on average
 (we should plan for an expected response time &lt; 40ms*). In exceptional circumstances
-response times of up to 1s may be acceptable.</li>
+response times of up to 1s may be acceptable.<pre><code>Is it possible to notify users of planned maintenance? If your service goes down also your customers are not able to serve their content to their users?
+</code></pre>
+</li>
 <li></li>
 </ol>
 <img src="./puml_e29.svg"><ol>
@@ -1056,6 +1058,8 @@ still working if the Client API is gone - either way our service is down.
 The watchdog additionally watches the database due to its importance as a
 critical component and to reduce the delay in the ping response while it
 propagates through the components.</p>
+<pre><code>Connecting the watchdog with deeper components can help to detect which component had a failure and increase the recovery time. 
+</code></pre>
 <ol start="5">
 <li></li>
 </ol>
