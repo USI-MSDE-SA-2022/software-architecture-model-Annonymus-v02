@@ -2085,7 +2085,7 @@ The watchdog additionally watches the database due to its importance as a
 critical component and to reduce the delay in the ping response while it
 propagates through the components.
 ```
-Connecting the watchdog with deeper components can help to detect which component had a failure and increase the recovery time. 
+Connecting the watchdog with deeper components can help to detect which component had a failure and increase the recovery time.
 ```
 5.
 
@@ -2249,6 +2249,337 @@ Good: 1, 2, 3, 4, 5
 Exceed: 1, 2, 3, 4, 5 then redo 1, 2, 3 for different scalability dimensions
 
 }
+
+1. Number of clients
+
+2. In the first iteration of the architecture, every component was instantiated only once.
+Given the imbalance in the type of queries (#read >> #write >> #admin), and the fact that the API
+should be very lightweight and the database is highly optimised to serve large volumes of data,
+the bottleneck is the query processor. Due to the performance-oriented design, it should still be
+able to tolerate a large number of clients, but it is ultimately limited by virtue of
+running on a single machine.
+
+3. For this reason, in assignment 10 (Connector View),
+we used a special connector between client API and query processor which would perform
+load balancing and allow the query processor to be instantiated multiple times.
+
+The logical view remains the same as the load balancer is abstracted away in the connector.
+
+Process view (simplified - unused components omitted and parser folded into processor):
+```puml
+@startuml
+title Coeus "User Query" Process View
+
+participant "Client API" as CAPI
+participant "Query Queue" as QQ
+participant "Query Processor" as PROC
+participant "Query Processor 2" as PROC2
+participant "Database" as DB
+
+activate PROC2
+
+QQ <- PROC: Pull Query
+[-> CAPI: Receive query
+CAPI -> QQ ++: Push Query
+QQ --> PROC ++: Query
+
+[-> CAPI: Receive query
+CAPI -> QQ ++: Push Query
+
+...time passes...
+
+PROC2 <-] --: finishes previous query
+QQ <- PROC2: Pull Query
+QQ --> PROC2 ++: Query
+
+PROC -> DB ++: SELECT query
+return Result
+QQ <-- PROC --: Result
+CAPI <-- QQ --: Result Q1
+
+PROC2 -> DB ++: SELECT query
+return Result
+QQ <-- PROC2 --: Result
+CAPI <-- QQ --: Result Q2
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+One possible deployment view:
+```puml
+@startuml
+!include <C4/C4_Container>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+
+Boundary(front, "API server") {
+    Container(api, "API", "") {
+        Component(capi, "Client API", "")
+    }
+    Container(adm_api, "Management API", "")
+    Container(auth, "Authentication Service", "")
+}
+
+Boundary(queue, "QQ server") {
+    Container(qq, "Query Queue", "")
+}
+
+Boundary(mid, "Processor servers") {
+    Container(proc, "Processor", "") {
+        Component(cproc, "Query Processor", "")
+        Component(cparse, "Query Parser", "")
+    }
+}
+
+Boundary(back, "DB server") {
+    Container(db, "DBMS", "")
+}
+
+Rel(adm_api, db, "TCP/IP")
+Rel(proc, db, "TCP/IP")
+Rel(api, auth, "HTTPS")
+Rel(api, qq, "RPC")
+Rel(proc, qq, "RPC")
+@enduml
+```
+
+4.
+
+1. What did you decide?
+
+## Scale to large number of users: by load balancing
+
+2. What was the context for your decision?
+
+We will have potentially large numbers of users querying the system at the same time.
+The vast majority of queries are read queries.
+The database and API components are efficient\*, but the query processor component
+could get overwhelmed.
+There is a need to overcome this limitation. Achieving that will require structural changes to the architecture.
+
+\* in fact the query queue also allows instantiation of multiple APIs in case that turns out to be the next bottleneck.
+
+3. What is the problem you are trying to solve?
+
+How can we scale in the number of requests received?
+
+4.  Which alternative options did you consider?
+
+Query queue, caching above the processor, replicating the entire stack (sans db)
+
+5. Which one did you choose?
+
+Query queue
+
+6. What is the main reason for that?
+
+Caching the results of queries in the API component would be a very simple to implement and cost-effective way of alleviating the pressure on the processor, but not very effective. We do not expect a lot of repetition among queries, particularly given the degree of complexity the system is designed to allow, so most queries would result in a cache miss.
+While it can be used to supplement other solutions, it is not sufficient on its own.
+Another issue with the cache is that its effectiveness depends on usage patterns.
+E.g. if a spike is due to a client putting a box near their search bar with advanced usage
+options, causing every client to repeat their query a few time as they refine it incrementally,
+we suddenly get a large increase in volume of queries while also increasing the uniqueness of queries, against which a cache would be no help.
+Another solution is to replicate the entire stack with e.g. a DNS-based load balancer in front. This is an option that requires slightly less work than the query queue as we already have
+all the components involved, but it is inefficient. Given that the API has higher capcacity
+than the processor, this means the instances of the API would be idle most of the time as
+the number of replicas is tuned to the capacity of the processor.
+The query queue allows independent scaling of both api and processor, so that each can be maximally utilised, while also increasing flexibility through the implementation of
+additional features in the query queue.
+
+
+5.
+
+1. What did you decide?
+
+## Component discovery: through a directory
+
+2. What was the context for your decision?
+
+The main component which is parallelised is the query processor, but the design of the query queue resolves the need for component discovery.
+The QQ is designed in such a way as to also allow parallelisation of the client API, which does need to be discovered by its dependants.
+This decision will affect the design of the load balancer.
+
+3. What is the problem you are trying to solve?
+
+How can clients discover the instances of the client API?
+
+4.  Which alternative options did you consider?
+
+Directory, dependency injection
+
+5. Which one did you choose?
+
+Directory
+
+6. What is the main reason for that?
+
+Simply put, using dependency injection is impossible in this context.
+The components which need to discover the location of the client API are the users' browsers,
+which we cannot control. In fact, we do not even necessarily provide the code
+of the program that's running there, as the API is public and anbody could write a client
+for it. Hence a directory is our only option. What this means is that every instance of
+the client API connects to the nameserver we use and registers itself as an option
+for the DNS load balancer (doing this in DNS actually means the API instances have to be very
+long-lived as DNS works on rather slow timescales, but if we desire faster turnaround,
+the same principle applies to any other load balancer). The DNS server then chooses one among
+the possible options when it gets a request, directing the client to the appropriate client API server.
+When a server shuts down, it unregisters itself on the nameserver (or if it crashes the watchdog does the same).
+
+
+1. Size of input/state
+
+2. Our system is designed to support complex queries over large amounts of data, but the current
+architecture expects the query processor to perform a single SQL query for the entire operation.
+This is not feasible if the database grows too much. Although databases are highly optimised to
+run efficiently on large datasets, there is still a limit to what can be done with a single machine.
+
+3.
+
+```puml
+@startuml
+skinparam componentStyle rectangle
+
+!include <tupadr3/font-awesome/database>
+!include <tupadr3/font-awesome/undo>
+
+title Coeus Logical View
+interface " " as DBDIR_I
+interface " " as DB_I
+interface " " as MUT_I
+interface " " as CAPI_I
+interface " " as ADM_API_I
+[Shard Directory] as DBDIR
+[Database <$database{scale=0.33}>] as DB
+component API {
+    [Client API <$undo{scale=0.33}>] as CAPI
+    [Admin API <$undo{scale=0.33}>] as ADM_API
+}
+interface " " as PROC_I
+component "Query Engine" {
+    [Query Processor] as PROC
+    interface " " as PARSE_I
+    [Query Parser] as PARSE
+}
+[Auth Service] as AUTH
+interface " " as ADM_I
+[Mutation Processor] as MUT
+[Client Management System] as ADM
+interface " " as AUTH_I
+
+DBDIR_I -- DBDIR
+DB_I -- DB
+PROC_I -- PROC
+PARSE - PARSE_I
+MUT_I -- MUT
+ADM_I -- ADM
+ADM_API_I -- ADM_API
+CAPI_I -- CAPI
+
+PARSE_I )- PROC
+CAPI --( PROC_I
+PROC --( DBDIR_I
+PROC --( DB_I
+AUTH -- AUTH_I
+AUTH_I )-- ADM_API
+AUTH_I )-- CAPI
+CAPI --( MUT_I
+MUT --( DBDIR_I
+MUT --( DB_I
+ADM_API --( ADM_I
+ADM --( DBDIR_I
+ADM --( DB_I
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+Simplified process view - unused components omitted and QQ/QP abstracted away:
+```puml
+@startuml
+title Coeus "User Query" Process View
+
+participant "Client API" as CAPI
+participant "Query Engine" as PROC
+participant "Shard Directory" as DBDIR
+participant "Database Shard 1" as DB1
+participant "Database Shard 2" as DB2
+participant "Database Shard 3" as DB3
+
+autoactivate on
+
+CAPI -> PROC: Query
+PROC -> DBDIR: Retrieve locations
+return Data Locations
+PROC -> DB1: Subquery #1
+PROC -> DB2: Subquery #1
+PROC -> DB3: Subquery #1
+return Partial result
+return Partial result
+return Partial result
+PROC -> PROC: aggregate
+return Result
+return Result
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+
+One possible deployment view (QQ omitted because puml makes a mess out of components
+    which are supposed to be middleware but only have incoming edges):
+```puml
+@startuml
+!include <C4/C4_Container>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+
+Boundary(front, "API server") {
+    Container(api, "API", "") {
+        Component(capi, "Client API", "")
+    }
+    Container(adm_api, "Management API", "")
+    Container(auth, "Authentication Service", "")
+}
+
+Boundary(mid, "Processor servers") {
+    Container(proc, "Processor", "") {
+        Component(cproc, "Query Processor", "")
+        Component(cparse, "Query Parser", "")
+    }
+}
+
+Boundary(back, "DB servers") {
+    Container(db, "Database", "") {
+        Component(cdb, "DBMS", "")
+    }
+}
+
+Boundary(dir, "Directory server") {
+    Container(dbdir, "Shard Directory", "") {
+        Component(cdbdir, "Shard Directory", "")
+    }
+}
+
+Rel(adm_api, db, "TCP/IP")
+Rel(adm_api, dbdir, "RPC")
+Rel(proc, db, "TCP/IP")
+Rel(proc, dbdir, "RPC")
+Rel(api, auth, "HTTPS")
+Rel(api, proc, "RPC")
+@enduml
+```
+
+
+
 
 # Ex - Flexibility
 
