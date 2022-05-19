@@ -1058,7 +1058,7 @@ still working if the Client API is gone - either way our service is down.
 The watchdog additionally watches the database due to its importance as a
 critical component and to reduce the delay in the ping response while it
 propagates through the components.</p>
-<pre><code>Connecting the watchdog with deeper components can help to detect which component had a failure and increase the recovery time. 
+<pre><code>Connecting the watchdog with deeper components can help to detect which component had a failure and increase the recovery time.
 </code></pre>
 <ol start="5">
 <li></li>
@@ -1179,7 +1179,118 @@ as a 36ms roundtrip, so we want to add at most that much processing delay.</p>
 <li><p>Write an ADR regarding the issue of component discovery, choosing one of the alternatives: dependency injection vs. directory. Can you identify an existing component playing the role of directory/dependency injection container? Could you give an example of where you would need to add such component to facilitate dynamic component discovery?</p>
 </li>
 </ol>
-<section class="pass"><span>&starf;&star;&star;: </span>1, 2, 3, 5</section><section class="ok"><span>&starf;&starf;&star;: </span>1, 2, 3, 4, 5</section><section class="exceed"><span>&starf;&starf;&starf;: </span>1, 2, 3, 4, 5 then redo 1, 2, 3 for different scalability dimensions</section></section><h1 id="ex---flexibility"><span class='task'>15.</span>  Flexibility</h1>
+<section class="pass"><span>&starf;&star;&star;: </span>1, 2, 3, 5</section><section class="ok"><span>&starf;&starf;&star;: </span>1, 2, 3, 4, 5</section><section class="exceed"><span>&starf;&starf;&starf;: </span>1, 2, 3, 4, 5 then redo 1, 2, 3 for different scalability dimensions</section></section><ol>
+<li><p>Number of clients</p>
+</li>
+<li><p>In the first iteration of the architecture, every component was instantiated only once.
+Given the imbalance in the type of queries (#read &gt;&gt; #write &gt;&gt; #admin), and the fact that the API
+should be very lightweight and the database is highly optimised to serve large volumes of data,
+the bottleneck is the query processor. Due to the performance-oriented design, it should still be
+able to tolerate a large number of clients, but it is ultimately limited by virtue of
+running on a single machine.</p>
+</li>
+<li><p>For this reason, in assignment 10 (Connector View),
+we used a special connector between client API and query processor which would perform
+load balancing and allow the query processor to be instantiated multiple times.</p>
+</li>
+</ol>
+<p>The logical view remains the same as the load balancer is abstracted away in the connector.</p>
+<p>Process view (simplified - unused components omitted and parser folded into processor):</p>
+<img src="./puml_e31.svg"><p>One possible deployment view:</p>
+<img src="./puml_e32.svg"><ol start="4">
+<li></li>
+<li><p>What did you decide?</p>
+</li>
+</ol>
+<h2 id="scale-to-large-number-of-users-by-load-balancing">Scale to large number of users: by load balancing</h2>
+<ol start="2">
+<li>What was the context for your decision?</li>
+</ol>
+<p>We will have potentially large numbers of users querying the system at the same time.
+The vast majority of queries are read queries.
+The database and API components are efficient*, but the query processor component
+could get overwhelmed.
+There is a need to overcome this limitation. Achieving that will require structural changes to the architecture.</p>
+<p>* in fact the query queue also allows instantiation of multiple APIs in case that turns out to be the next bottleneck.</p>
+<ol start="3">
+<li>What is the problem you are trying to solve?</li>
+</ol>
+<p>How can we scale in the number of requests received?</p>
+<ol start="4">
+<li>Which alternative options did you consider?</li>
+</ol>
+<p>Query queue, caching above the processor, replicating the entire stack (sans db)</p>
+<ol start="5">
+<li>Which one did you choose?</li>
+</ol>
+<p>Query queue</p>
+<ol start="6">
+<li>What is the main reason for that?</li>
+</ol>
+<p>Caching the results of queries in the API component would be a very simple to implement and cost-effective way of alleviating the pressure on the processor, but not very effective. We do not expect a lot of repetition among queries, particularly given the degree of complexity the system is designed to allow, so most queries would result in a cache miss.
+While it can be used to supplement other solutions, it is not sufficient on its own.
+Another issue with the cache is that its effectiveness depends on usage patterns.
+E.g. if a spike is due to a client putting a box near their search bar with advanced usage
+options, causing every client to repeat their query a few time as they refine it incrementally,
+we suddenly get a large increase in volume of queries while also increasing the uniqueness of queries, against which a cache would be no help.
+Another solution is to replicate the entire stack with e.g. a DNS-based load balancer in front. This is an option that requires slightly less work than the query queue as we already have
+all the components involved, but it is inefficient. Given that the API has higher capcacity
+than the processor, this means the instances of the API would be idle most of the time as
+the number of replicas is tuned to the capacity of the processor.
+The query queue allows independent scaling of both api and processor, so that each can be maximally utilised, while also increasing flexibility through the implementation of
+additional features in the query queue.</p>
+<ol start="5">
+<li></li>
+<li><p>What did you decide?</p>
+</li>
+</ol>
+<h2 id="component-discovery-through-a-directory">Component discovery: through a directory</h2>
+<ol start="2">
+<li>What was the context for your decision?</li>
+</ol>
+<p>The main component which is parallelised is the query processor, but the design of the query queue resolves the need for component discovery.
+The QQ is designed in such a way as to also allow parallelisation of the client API, which does need to be discovered by its dependants.
+This decision will affect the design of the load balancer.</p>
+<ol start="3">
+<li>What is the problem you are trying to solve?</li>
+</ol>
+<p>How can clients discover the instances of the client API?</p>
+<ol start="4">
+<li>Which alternative options did you consider?</li>
+</ol>
+<p>Directory, dependency injection</p>
+<ol start="5">
+<li>Which one did you choose?</li>
+</ol>
+<p>Directory</p>
+<ol start="6">
+<li>What is the main reason for that?</li>
+</ol>
+<p>Simply put, using dependency injection is impossible in this context.
+The components which need to discover the location of the client API are the users&#39; browsers,
+which we cannot control. In fact, we do not even necessarily provide the code
+of the program that&#39;s running there, as the API is public and anbody could write a client
+for it. Hence a directory is our only option. What this means is that every instance of
+the client API connects to the nameserver we use and registers itself as an option
+for the DNS load balancer (doing this in DNS actually means the API instances have to be very
+long-lived as DNS works on rather slow timescales, but if we desire faster turnaround,
+the same principle applies to any other load balancer). The DNS server then chooses one among
+the possible options when it gets a request, directing the client to the appropriate client API server.
+When a server shuts down, it unregisters itself on the nameserver (or if it crashes the watchdog does the same).</p>
+<ol>
+<li><p>Size of input/state</p>
+</li>
+<li><p>Our system is designed to support complex queries over large amounts of data, but the current
+architecture expects the query processor to perform a single SQL query for the entire operation.
+This is not feasible if the database grows too much. Although databases are highly optimised to
+run efficiently on large datasets, there is still a limit to what can be done with a single machine.</p>
+</li>
+<li></li>
+</ol>
+<img src="./puml_e33.svg"><p>Simplified process view - unused components omitted and QQ/QP abstracted away:</p>
+<img src="./puml_e34.svg"><p>One possible deployment view (QQ omitted because puml makes a mess out of components
+    which are supposed to be middleware but only have incoming edges):</p>
+<img src="./puml_e35.svg"><h1 id="ex---flexibility"><span class='task'>15.</span>  Flexibility</h1>
 <section class="instructions"><p>Only dead software stops changing. You just received a message from your customer, they have an idea. Is your architecture ready for it?</p>
 <ol>
 <li><p>Pick a new use case scenario. Precisely, what exactly do you need to change of your existing architecture so that it can be supported? Model the updated logical/process/deployment views.</p>
