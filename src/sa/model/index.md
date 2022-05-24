@@ -2604,3 +2604,332 @@ Good: 1, two out of 2-5.
 Exceed: 1-5.
 
 }
+
+1. We consider the case in which clients are not willing to let us store the data
+ourselves (maybe for legal reasons, e.g. we're based in europe and they need to
+follow some law according to which they may not export or store data outside
+of the USA). That means our systems, upon receiving a query, must contact their
+database to satisfy it.
+So the query processor, mutation processor and client management system need to
+choose between and contact (directly or indirectly) either our database or one
+of our clients'.
+
+To support this use case we modify our logical view as follows:
+```puml
+@startuml
+skinparam componentStyle rectangle
+
+!include <tupadr3/font-awesome/database>
+!include <tupadr3/font-awesome/undo>
+
+title Coeus Logical View
+interface " " as DB_I
+interface " " as MUT_I
+interface " " as ADM_I
+interface " " as ADM_API_I
+interface " " as CAPI_I
+[Database <$database{scale=0.33}>] as DB
+interface " " as DBMNG_I
+[Data Manager] as DBMNG
+interface " " as EXTDB_I
+[External Databases] as EXTDB
+component API {
+    [Client API <$undo{scale=0.33}>] as CAPI
+    [Admin API <$undo{scale=0.33}>] as ADM_API
+}
+interface " " as PROC_I
+component "Query Engine" {
+    [Query Processor] as PROC
+    interface " " as PARSE_I
+    [Query Parser] as PARSE
+}
+[Auth Service] as AUTH
+[Mutation Processor] as MUT
+[Client Management System] as ADM
+interface " " as AUTH_I
+
+PROC_I -- PROC
+PARSE - PARSE_I
+MUT_I -- MUT
+ADM - ADM_I
+ADM_API_I -- ADM_API
+CAPI_I -- CAPI
+DB_I - DB
+
+EXTDB_I -- EXTDB
+DBMNG_I - DBMNG
+
+PARSE_I )- PROC
+CAPI --( PROC_I
+PROC --( DBMNG_I
+AUTH_I - AUTH
+ADM_API -( AUTH_I
+CAPI -( AUTH_I
+CAPI --( MUT_I
+MUT --( DBMNG_I
+ADM_I )- ADM_API
+ADM --( DBMNG_I
+
+DBMNG -( DB_I
+DBMNG --( EXTDB_I
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+Simplified process view - unused components omitted and QQ/QP abstracted away:
+```puml
+@startuml
+title Coeus "User Query" Process View
+
+participant "Client API" as CAPI
+participant "Query Engine" as PROC
+participant "Data Manager" as DBMNG
+participant "Database" as DB
+participant "External Database" as EXTDB
+
+autoactivate on
+
+CAPI -> PROC: Query
+PROC -> DBMNG: Translated Query
+
+alt Data is locally available
+DBMNG -> DB: Translated Query
+return Result
+else Data is remote
+DBMNG -> EXTDB: Translated Query
+return Result
+end
+
+return Result
+return Result
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+One possible deployment view (QQ omitted because puml makes a mess out of components
+    which are supposed to be middleware but only have incoming edges):
+```puml
+@startuml
+!include <C4/C4_Container>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+
+Boundary(front, "API server") {
+    Container(api, "API", "") {
+        Component(capi, "Client API", "")
+    }
+    Container(adm_api, "Management API", "")
+    Container(auth, "Authentication Service", "")
+}
+
+Boundary(mid, "Processor servers") {
+    Container(proc, "Processor", "") {
+        Component(cproc, "Query Processor", "")
+        Component(cparse, "Query Parser", "")
+    }
+}
+
+Boundary(back, "DB servers") {
+    Container(dbmng, "Data Manager", "") {
+        Component(cdbmng, "Data Manager", "")
+    }
+
+    Container(db, "Database", "") {
+        Component(cdb, "DBMS", "")
+    }
+}
+
+Boundary(cloud, "The Cloud")
+
+Rel(adm_api, dbmng, "RPC")
+Rel(proc, dbmng, "RPC")
+Rel(api, auth, "HTTPS")
+Rel(api, proc, "RPC")
+Rel(dbmng, cloud, "TCP/IP")
+Rel(dbmng, db, "TCP/IP")
+@enduml
+```
+
+2. We consider the case in which a rogue developer designed a backdoor which would allow
+some users to execute mutations without authenticating.
+
+```puml
+@startuml
+title Coeus "User Query" Process View
+
+participant "Client API" as CAPI
+participant "Auth Service" as AUTH
+participant "Mutation Processor" as PROC
+participant "Database" as DB
+
+autoactivate on
+
+[-> CAPI: Query
+opt Backdoor not triggered
+CAPI -> AUTH: Authentication credentials
+return Success
+end
+
+CAPI -> PROC: Query
+PROC -> DB: Translated Query
+return Result
+return Result
+return Result
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+3. The only external component in the system is the auth service, so we
+consider the scenario in which the auth service's interface changes and we
+cannot afford to rewrite the admin API and client API accordingly.
+
+Hence we decide to build an adapter between our systems and the external component
+to maintain the illusion of the old interface.
+
+```puml
+@startuml
+skinparam componentStyle rectangle
+
+!include <tupadr3/font-awesome/database>
+!include <tupadr3/font-awesome/undo>
+
+title Coeus Logical View
+interface " " as DB_I
+interface " " as MUT_I
+interface " " as ADM_I
+interface " " as ADM_API_I
+interface " " as CAPI_I
+[Database <$database{scale=0.33}>] as DB
+component API {
+    [Client API <$undo{scale=0.33}>] as CAPI
+    [Admin API <$undo{scale=0.33}>] as ADM_API
+}
+interface " " as PROC_I
+component "Query Engine" {
+    [Query Processor] as PROC
+    interface " " as PARSE_I
+    [Query Parser] as PARSE
+}
+interface " " as AUTH_AD_I
+[Auth Adapter] as AUTH_AD
+interface " " as AUTH_I
+[Auth Service] as AUTH
+[Mutation Processor] as MUT
+[Client Management System] as ADM
+
+DB_I -- DB
+PROC_I -- PROC
+PARSE - PARSE_I
+MUT_I -- MUT
+ADM - ADM_I
+ADM_API_I -- ADM_API
+CAPI_I -- CAPI
+AUTH_I - AUTH
+AUTH_AD_I - AUTH_AD
+
+PARSE_I )- PROC
+CAPI --( PROC_I
+PROC --( DB_I
+ADM_API -( AUTH_AD_I
+CAPI -( AUTH_AD_I
+CAPI --( MUT_I
+MUT --( DB_I
+ADM_I )- ADM_API
+ADM --( DB_I
+AUTH_AD -( AUTH_I
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+4. We consider the scenario in which we permit user-defined extensions to the query parser
+to increase its power or permit the use of custom syntax.
+
+That means the query parser would need to accept registration of new components, which it
+will then call upon receiving a query to process.
+
+An example plugin is one that translates a query from google-like "bag of words" syntax to
+our own language to accomodate users who are more used to that.
+e.g. it would turn `dark fantasy female protagonist "no romance" OR "low romance" watchtime > 100` into `"dark fantasy" AND "female protagonist" AND ("no romance" OR "low romance") AND watchtime(100..)`*
+
+*actually we foresee already supporting the most commonly found syntaxes, but the same
+could be done for more niche languages which we might not support yet.
+
+```puml
+@startuml
+skinparam componentStyle rectangle
+
+!include <tupadr3/font-awesome/database>
+!include <tupadr3/font-awesome/undo>
+
+title Coeus Logical View
+interface " " as DB_I
+interface " " as MUT_I
+interface " " as ADM_I
+interface " " as ADM_API_I
+interface " " as CAPI_I
+[Database <$database{scale=0.33}>] as DB
+component API {
+    [Client API <$undo{scale=0.33}>] as CAPI
+    [Admin API <$undo{scale=0.33}>] as ADM_API
+}
+interface " " as PROC_I
+component "Query Engine" {
+    [Query Processor] as PROC
+    interface " " as PARSE_I
+    [Query Parser] as PARSE
+}
+interface " " as PLUG_I
+[Parser Plugins] as PLUG
+interface " " as AUTH_I
+[Auth Service] as AUTH
+[Mutation Processor] as MUT
+[Client Management System] as ADM
+
+DB_I -- DB
+PROC_I -- PROC
+PARSE_I - PARSE
+MUT_I -- MUT
+ADM - ADM_I
+ADM_API_I -- ADM_API
+CAPI_I -- CAPI
+AUTH_I - AUTH
+PLUG_I - PLUG
+
+PROC -( PARSE_I
+CAPI --( PROC_I
+PROC --( DB_I
+ADM_API -( AUTH_I
+CAPI -( AUTH_I
+CAPI --( MUT_I
+MUT --( DB_I
+ADM_I )- ADM_API
+ADM --( DB_I
+
+PARSE -( PLUG_I
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Courier
+@enduml
+```
+
+5. Our application is already a microservice. That was mostly the premise of the whole thing:
+Other companies have monolithic applications with integrated tagging systems.
+Due to their monolithic nature, they end up having significant flaws in their tagging
+system, hence we propose the creation of a (micro-) service they can rent instead.
+
+As such, the entire architecture is built around satisfaction of a single task
+and every component works on the same state, making it impossible to split any further.
