@@ -1,0 +1,84 @@
+
+/// Adding [*] before the feature name will make it Required
+/// Adding [ ] before the feature name will mark it as Optional
+
+/// Composite features can express constraints between their sub-features
+/// { } a set of exclusive features (pick one)
+/// ( ) any combination of the features is possible
+/// [ ] a set of features (usually combined with the [*] [ ] annotation)
+
+/// Other names under consideration:
+/// - Thoth (god of knowledge, scribe of gods)
+/// - Tir (god of language, wisdom)
+/// - Ogma (inventor of the ogham alphabet)
+/// - Saraswati (goddess of knowledge and speech)
+/// - Brihaspati (bestower of knowledge and eloquence)
+/// - Shukra (bestower of knowledge)
+/// - Al-Kutbay ("the scribe", god of knowledge and writing)
+/// - Mimir (god of wisdom)
+/// - Orunmila (god of wisdom, knowledge and divination)
+Coeus formerly Tag4You: [
+    [*] Queries : [
+        [*] Query format : (
+            Natural language-like query language,
+            Formal query language,
+            /// vndb
+            Computer-readable format : (
+                JSON,
+                Custom binary
+            )
+        ),
+        Query length : {
+            Unlimited,
+            Bounded
+        }
+    ],
+    [*] Content Tagging : (
+        [*] Binary tags : [
+            /// vndb
+            [ ] Weighted tags
+        ],
+        Numeric tags e.g. runtime,
+        /// vndb
+        Tag aliases,
+        /// vndb
+        Sub-tags/categories,
+        Exclusive tags,
+        /// vndb
+        Tag attributes e.g. spoiler,
+        Tag descriptions
+    ),
+    [*] Data modification : [
+        [ ] Default tags, /// binary tags are just "off" by default, but could have
+                          /// default-on tags too. Numerical tags and exclusive
+                          /// tags in the same category benefit from this too
+        /// vndb
+        [*] Access control
+    ],
+    [*] Result presentation : [
+        /// vndb
+        [ ] Tag filter, /// e.g. "don't show me any tags indicative of sexual content"
+        /// -netflix
+        [*] Sorting : (
+            Numeric tag value,
+            Numeric tags expression,
+            Tag weight,
+            Client-supplied attributes
+        ),
+        /// vndb
+        [*] Paging : [
+            /// vndb
+            [ ] Variable page size
+        ]
+    ]
+]
+
+/// Then the feature relationships
+
+/// Implication
+Numeric tag value => Numeric tags e.g. runtime
+Numeric tags expression => Numeric tags e.g. runtime
+Tag weight => Weighted tags
+
+/// Exclusive
+Numeric tags expression <--> Numeric tag value

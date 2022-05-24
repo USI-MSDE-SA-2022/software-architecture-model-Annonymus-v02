@@ -1,0 +1,21 @@
+web Users -> Client API
+web Admins -> Admin API
+
+
+/// Client API -call->
+Auth Service <-call- Admin API
+
+/// replace the '->' arrow with '<-' to break the renderer
+Client API -> QQ <- Query Processor
+Client API -call-> Mutation Processor
+
+Query Processor -call-> Query Parser
+Client API -call-> Auth Service
+
+Query Processor -SELECT-> db
+
+Admin API -call-> Client Management System
+
+Mutation Processor -UPDATE-> db
+
+Client Management System -CREATE-> db
