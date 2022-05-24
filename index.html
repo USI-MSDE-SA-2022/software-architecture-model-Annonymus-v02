@@ -1304,7 +1304,51 @@ run efficiently on large datasets, there is still a limit to what can be done wi
 <li><p>Assuming you have a centralized deployment with all stateful components storing their state in the same database, propose a strategy to split the monolith into at least two different microservices. Model the new logical/deployment view as well as the interfaces of each microservice you introduce.</p>
 </li>
 </ol>
-<section class="pass"><span>&starf;&star;&star;: </span>1, one out of 2-5.</section><section class="ok"><span>&starf;&starf;&star;: </span>1, two out of 2-5.</section><section class="exceed"><span>&starf;&starf;&starf;: </span>1-5.</section></section>
+<section class="pass"><span>&starf;&star;&star;: </span>1, one out of 2-5.</section><section class="ok"><span>&starf;&starf;&star;: </span>1, two out of 2-5.</section><section class="exceed"><span>&starf;&starf;&starf;: </span>1-5.</section></section><ol>
+<li>We consider the case in which clients are not willing to let us store the data
+ourselves (maybe for legal reasons, e.g. we&#39;re based in europe and they need to
+follow some law according to which they may not export or store data outside
+of the USA). That means our systems, upon receiving a query, must contact their
+database to satisfy it.
+So the query processor, mutation processor and client management system need to
+choose between and contact (directly or indirectly) either our database or one
+of our clients&#39;.</li>
+</ol>
+<p>To support this use case we modify our logical view as follows:</p>
+<img src="./puml_e36.svg"><p>Simplified process view - unused components omitted and QQ/QP abstracted away:</p>
+<img src="./puml_e37.svg"><p>One possible deployment view (QQ omitted because puml makes a mess out of components
+    which are supposed to be middleware but only have incoming edges):</p>
+<img src="./puml_e38.svg"><ol start="2">
+<li>We consider the case in which a rogue developer designed a backdoor which would allow
+some users to execute mutations without authenticating.</li>
+</ol>
+<img src="./puml_e39.svg"><ol start="3">
+<li>The only external component in the system is the auth service, so we
+consider the scenario in which the auth service&#39;s interface changes and we
+cannot afford to rewrite the admin API and client API accordingly.</li>
+</ol>
+<p>Hence we decide to build an adapter between our systems and the external component
+to maintain the illusion of the old interface.</p>
+<img src="./puml_e40.svg"><ol start="4">
+<li>We consider the scenario in which we permit user-defined extensions to the query parser
+to increase its power or permit the use of custom syntax.</li>
+</ol>
+<p>That means the query parser would need to accept registration of new components, which it
+will then call upon receiving a query to process.</p>
+<p>An example plugin is one that translates a query from google-like &quot;bag of words&quot; syntax to
+our own language to accomodate users who are more used to that.
+e.g. it would turn <code>dark fantasy female protagonist &quot;no romance&quot; OR &quot;low romance&quot; watchtime &gt; 100</code> into <code>&quot;dark fantasy&quot; AND &quot;female protagonist&quot; AND (&quot;no romance&quot; OR &quot;low romance&quot;) AND watchtime(100..)</code>*</p>
+<p>*actually we foresee already supporting the most commonly found syntaxes, but the same
+could be done for more niche languages which we might not support yet.</p>
+<img src="./puml_e41.svg"><ol start="5">
+<li>Our application is already a microservice. That was mostly the premise of the whole thing:
+Other companies have monolithic applications with integrated tagging systems.
+Due to their monolithic nature, they end up having significant flaws in their tagging
+system, hence we propose the creation of a (micro-) service they can rent instead.</li>
+</ol>
+<p>As such, the entire architecture is built around satisfaction of a single task
+and every component works on the same state, making it impossible to split any further.</p>
+
     </main>
 
 
